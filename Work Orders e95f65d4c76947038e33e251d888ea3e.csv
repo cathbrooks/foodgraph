@@ -1,0 +1,41 @@
+﻿Name,Status,Area,Description,Sequence
+Secure secrets + environment configuration,Backlog,Infrastructure,"Store API keys (Places/Yelp, LLM provider) securely, configure per-environment variables, and ensure they are not exposed to client.",1
+Set up Next.js app scaffold + core routes,Backlog,Frontend,"Initialize Next.js project, add basic routing for onboarding, chat, and settings. Establish shared layout, navigation, and environment config.",2
+Create UI component library for MVP screens,Backlog,Frontend,"Build reusable components (buttons, inputs, cards, chat bubbles, loading states, empty states) to keep UI consistent and fast to iterate.",3
+Integrate Supabase Auth (server + client),Backlog,Backend,"Configure Supabase project keys, implement auth middleware/session retrieval, and protect authenticated routes.",4
+Database: create profiles table + RLS policies,Backlog,Database,Define profiles schema and row-level security so users can only read/write their own profile.,5
+Implement authentication UI (sign up / login),Backlog,Frontend,Create screens for signup/login/logout and basic session handling in the client.,6
+Database: create user_preferences table + RLS policies,Backlog,Database,"Define preferences schema (cuisines, restrictions, travel radius) and secure with per-user RLS.",7
+API route: Update user preferences,Backlog,Backend,"Implement endpoint to update cuisines, dietary restrictions, and travel radius for the authenticated user.",8
+Create “Profile & Preferences” onboarding flow (UI),Backlog,Frontend,"Build onboarding steps for cuisine preferences, dietary restrictions, and travel radius input.",9
+Preferences settings page (post-onboarding),Backlog,Frontend,"Allow users to update cuisines, dietary restrictions, and travel radius after onboarding.",10
+Database: create budget_slots table + RLS policies,Backlog,Database,"Schema for weekly slots (days_of_week, start_time, end_time, min_budget, max_budget) with RLS.",11
+API route: CRUD budget slots,Backlog,Backend,"Implement endpoints to create, update, delete, and list budget_slots for the authenticated user with validation.",12
+API route: Get current user profile + preferences,Backlog,Backend,Implement authenticated endpoint to fetch profile and preferences from Supabase for client hydration.,13
+Create “Budget Slots” onboarding flow (UI),Backlog,Frontend,"UI to add/edit/delete weekly budget slots with day(s) of week, start/end time, and min/max budget.",14
+Budget slot time picker + day-of-week selector components,Backlog,Frontend,"Implement UX controls for selecting time ranges and days with validation (start before end, required fields).",15
+Budget slots management page (post-onboarding),Backlog,Frontend,"CRUD UI for budget slots after onboarding, reusing onboarding components.",16
+Implement slotResolver service (MVP rules),Backlog,Backend,"Given current day/time and the user’s budget slots, determine the active slot. Handle edge cases (no slot, overlapping slots).",17
+API route: Resolve active budget slot for now,Backlog,Backend,Endpoint that returns the active budget slot (or fallback) to support “Find Food” and chat requests.,18
+Location permission request + capture current coordinates,Backlog,Frontend,"Implement browser geolocation permission handling, user-friendly fallbacks, and persist last known location for session use.",19
+Build chat interface MVP,Backlog,Frontend,"Implement chat thread UI with message list, input box, submit handling, and displaying 3–5 recommendations as cards.",20
+Implement restaurantProvider (Google Places or Yelp),Backlog,Backend,"Integrate external restaurant API to fetch nearby open restaurants given lat/lng + radius, including pricing/rating when available.",21
+"Implement restaurant filtering (budget, open now, radius, dietary constraints)",Backlog,Backend,"Filter candidate restaurants by travel radius, open status, and budget range; apply dietary restrictions in a best-effort way based on available metadata.",22
+Implement recommendationScorer (deterministic scoring),Backlog,Backend,"Score restaurants using budget fit, cuisine match, distance, rating, and lightweight preference boosts based on prior selections.",23
+Implement chatOrchestrator workflow (LangGraph skeleton),Backlog,AI,"Wire a LangGraph flow that accepts a user query, calls slotResolver + restaurantProvider + scorer, and produces a structured response.",24
+LLM prompt + response schema for chat explanations,Backlog,AI,Create prompts that explain “why these picks” using the computed results (without letting the model re-rank). Enforce structured JSON output.,25
+API route: Chat recommendation request,Backlog,Backend,"Endpoint that takes user message + location, runs the orchestrator, and returns structured recommendations (3–5 + optional wildcard).",26
+Frontend rendering of recommendations + “why” explanations,Backlog,Frontend,"Display restaurant cards with key info (name, distance, price, rating) and an explanation blurb generated from the orchestrator.",27
+Add “Find Food” quick action entry point,Backlog,Frontend,Add a prominent button that launches a recommendation request using current context (time + location).,28
+Error handling + user-friendly fallbacks for recommendation flow,Backlog,Frontend,"Handle “no location,” “no restaurants found,” “API down,” and “no active budget slot” cases with clear UX and safe backend defaults.",29
+Track recommendation events on generation,Backlog,Backend,"When recommendations are returned, write a recommendation_events record including context (slot, budgets, location cell, filters).",30
+Database: create recommendation_events table,Backlog,Database,"Store each recommendation response payload (restaurant ids, scores, slot used, request context) for analytics/personalization later.",31
+Database: create user_actions table,Backlog,Database,Log clicks and selections of recommended restaurants (and wildcard usage) to support behavior tracking.,32
+API route: Log user action events,Backlog,Backend,Authenticated endpoint for recording click/select actions with related recommendation_event id.,33
+Track user actions (click/select/wildcard),Backlog,Frontend,Instrument UI events and create endpoint(s) to record actions into user_actions.,34
+Performance budget + latency instrumentation,Backlog,Infrastructure,"Add timing metrics around provider calls, scoring, and total request time; log slow requests and ensure under-3s target is measurable.",35
+Database: create restaurant_cache table + RLS/service access,Backlog,Database,Cache restaurant results keyed by geohash/cell + query params + timestamp; define access rules (likely service role only).,36
+Caching layer for restaurant queries,Backlog,Backend,Implement read-through cache using restaurant_cache to reduce external API calls and improve latency; define TTL strategy.,37
+Basic personalization hints (MVP lightweight),Backlog,Backend,"Add simple boosts based on historical user_actions (for example, cuisines selected more often, price tolerance inferred). Keep logic deterministic.",38
+Implement wildcardEngine (MVP heuristic),Backlog,Backend,Select a high-quality candidate slightly outside usual cuisine preferences while staying within reasonable distance and acceptable budget bounds.,39
+Add “Wildcard” UI affordance,Backlog,Frontend,Add a “Wildcard” button/toggle in chat results that requests a wildcard recommendation and renders it distinctly.,40
