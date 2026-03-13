@@ -1,5 +1,5 @@
 import type { RecommendationState } from "../state";
-import type { Intent, IntentConstraints } from "../state";
+import type { Intent } from "../state";
 import { getOpenAIClient } from "@/lib/ai/client";
 import { IntentSchema } from "@/lib/ai/schemas/intentSchema";
 import { buildIntentSystemPrompt } from "@/lib/ai/prompts/intentPrompt";

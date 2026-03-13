@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { serverEnv } from "@/lib/env";
+import { getServerEnv } from "@/lib/env";
 
 export interface RestaurantInsights {
   summary: string;
@@ -14,7 +14,7 @@ let _openai: OpenAI | null = null;
 
 function getClient(): OpenAI {
   if (!_openai) {
-    _openai = new OpenAI({ apiKey: serverEnv.OPENAI_API_KEY });
+    _openai = new OpenAI({ apiKey: getServerEnv().OPENAI_API_KEY });
   }
   return _openai;
 }

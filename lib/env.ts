@@ -47,7 +47,17 @@ function validateClient(): ClientEnv {
   return parsed.data;
 }
 
-export const serverEnv =
-  typeof window === "undefined" ? validateServer() : (undefined as never);
+let _serverEnv: ServerEnv | undefined;
+export function getServerEnv(): ServerEnv {
+  if (typeof window !== "undefined") {
+    throw new Error("getServerEnv() must not be called on the client");
+  }
+  if (!_serverEnv) _serverEnv = validateServer();
+  return _serverEnv;
+}
 
-export const clientEnv = validateClient();
+let _clientEnv: ClientEnv | undefined;
+export function getClientEnv(): ClientEnv {
+  if (!_clientEnv) _clientEnv = validateClient();
+  return _clientEnv;
+}
