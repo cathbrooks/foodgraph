@@ -35,6 +35,11 @@ export const IntentConstraintsSchema = z.object({
     .nullable()
     .optional()
     .describe("Name of the specific restaurant the user is asking about. Null if not applicable."),
+  searchQuery: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("A venue-type or category search term when the user asks for a type of place rather than a cuisine, e.g. 'coffee shops', 'bakeries', 'brunch spots', 'pizza'. Null if cuisineFilter already captures the request."),
 });
 
 export const IntentSchema = z.object({

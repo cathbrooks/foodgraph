@@ -27,6 +27,7 @@ export interface IntentConstraints {
   requestedWildcard?: boolean;
   dietaryFilter?: string;
   targetRestaurant?: string;
+  searchQuery?: string;
 }
 
 export interface Intent {

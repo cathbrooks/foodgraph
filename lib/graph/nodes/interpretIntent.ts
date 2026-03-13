@@ -70,6 +70,7 @@ export async function interpretIntent(
         requestedWildcard: parsed.data.constraints.requestedWildcard,
         dietaryFilter: parsed.data.constraints.dietaryFilter ?? undefined,
         targetRestaurant: parsed.data.constraints.targetRestaurant ?? undefined,
+        searchQuery: parsed.data.constraints.searchQuery ?? undefined,
       },
     };
 

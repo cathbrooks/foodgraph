@@ -19,6 +19,7 @@ export interface RestaurantSearchParams {
 const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com/places/search";
 
 const FOURSQUARE_CATEGORY_DINING = "13065";
+const FOURSQUARE_CATEGORY_FOOD = "13000";
 
 const NON_FOOD_CATEGORY_NAMES = new Set([
   "bar",
@@ -160,7 +161,7 @@ export async function searchNearbyRestaurants(
   const url = new URL(FOURSQUARE_BASE_URL);
   url.searchParams.set("ll", `${location.lat},${location.lng}`);
   url.searchParams.set("radius", String(radiusMeters));
-  url.searchParams.set("categories", FOURSQUARE_CATEGORY_DINING);
+  url.searchParams.set("categories", query ? FOURSQUARE_CATEGORY_FOOD : FOURSQUARE_CATEGORY_DINING);
   url.searchParams.set("limit", String(Math.min(maxResults, 50)));
   url.searchParams.set("fields", FOURSQUARE_FIELDS);
 

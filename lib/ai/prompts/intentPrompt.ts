@@ -22,6 +22,7 @@ Rules:
 - Set requestedWildcard to true only if the user explicitly asks for a surprise, wildcard, or something unexpected.
 - Extract dietaryFilter if the user mentions a dietary need (e.g. "vegetarian", "vegan", "gluten-free", "halal", "kosher", "dairy-free", "nut-free"). Use lowercase with hyphens.
 - Set targetRestaurant to the name of the specific restaurant the user is asking about, or null if not applicable. Match against the restaurant list above when possible.
+- Extract searchQuery when the user asks for a type of place or category that is NOT a specific cuisine. Examples: "coffee shops", "bakeries", "brunch spots", "dessert places", "pizza", "tacos", "bubble tea", "juice bars", "ice cream". Use lowercase. Set to null if cuisineFilter already captures the request.
 - Do NOT set type to "recommend" when the user is asking about an already-shown restaurant. Use "ask_detail" instead.
 - Do NOT set type to "recommend" when the user wants to modify existing results. Use "refine" instead.
 
@@ -33,27 +34,31 @@ Respond with valid JSON using exactly this structure:
     "priceCeiling": number or null,
     "requestedWildcard": boolean,
     "dietaryFilter": string or null,
-    "targetRestaurant": string or null
+    "targetRestaurant": string or null,
+    "searchQuery": string or null
   }
 }
 
 Example for "I'm craving Thai food":
-{"type":"recommend","constraints":{"cuisineFilter":"thai","priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null}}
+{"type":"recommend","constraints":{"cuisineFilter":"thai","priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
 
 Example for "Something cheaper" (after results shown):
-{"type":"refine","constraints":{"cuisineFilter":null,"priceCeiling":15,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null}}
+{"type":"refine","constraints":{"cuisineFilter":null,"priceCeiling":15,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
 
 Example for "Tell me more about Mama Sushi":
-{"type":"ask_detail","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":"Mama Sushi"}}
+{"type":"ask_detail","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":"Mama Sushi","searchQuery":null}}
 
 Example for "What are the hours?" (after selecting a restaurant):
-{"type":"ask_detail","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null}}
+{"type":"ask_detail","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
 
 Example for "These look great!":
-{"type":"feedback","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null}}
+{"type":"feedback","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
 
 Example for "What's a good tip percentage?":
-{"type":"general","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null}}
+{"type":"general","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
+
+Example for "coffee shops":
+{"type":"recommend","constraints":{"cuisineFilter":null,"priceCeiling":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":"coffee shops"}}
 
 Do not include any other text.`;
 }

@@ -4,6 +4,7 @@ import { getRestaurantsWithCache } from "@/lib/restaurants/restaurantCache";
 function buildSearchQuery(state: RecommendationState): string | undefined {
   const parts: string[] = [];
   const constraints = state.intent?.constraints;
+  if (constraints?.searchQuery) parts.push(constraints.searchQuery);
   if (constraints?.cuisineFilter) parts.push(constraints.cuisineFilter);
   if (constraints?.dietaryFilter) parts.push(constraints.dietaryFilter);
   return parts.length > 0 ? parts.join(" ") : undefined;
