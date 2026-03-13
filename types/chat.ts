@@ -49,6 +49,7 @@ export const RestaurantDetailsSchema = z.object({
   reviews: z.array(GoogleReviewSchema),
   opening_hours: z.array(z.string()).nullable(),
   is_open_now: z.boolean().nullable(),
+  price_level: z.string().nullable(),
   dine_in: z.boolean().nullable(),
   delivery: z.boolean().nullable(),
   takeout: z.boolean().nullable(),

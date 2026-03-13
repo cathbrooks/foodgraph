@@ -184,11 +184,16 @@ const PRICE_RANGES: Record<string, string> = {
 function PriceEstimate({
   priceLevel,
   avgPrice,
+  googlePriceLevel,
 }: {
   priceLevel: PriceLevel | null;
   avgPrice: number | null;
+  googlePriceLevel?: string | null;
 }) {
-  if (!priceLevel && avgPrice == null) return null;
+  const displayLevel = googlePriceLevel ?? priceLevel;
+  if (!displayLevel && avgPrice == null) return null;
+
+  const rangeKey = displayLevel as keyof typeof PRICE_RANGES;
 
   return (
     <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
@@ -197,10 +202,10 @@ function PriceEstimate({
         <span className="font-medium">Estimated cost: </span>
         {avgPrice != null ? (
           <span>~${avgPrice} per person</span>
-        ) : priceLevel ? (
-          <span>{PRICE_RANGES[priceLevel]} per person</span>
+        ) : rangeKey && PRICE_RANGES[rangeKey] ? (
+          <span>{PRICE_RANGES[rangeKey]} per person</span>
         ) : null}
-        {priceLevel && <span className="text-emerald-600 ml-1.5">({priceLevel})</span>}
+        {displayLevel && <span className="text-emerald-600 ml-1.5">({displayLevel})</span>}
       </div>
     </div>
   );
@@ -303,6 +308,7 @@ export function RestaurantCard({
               <PriceEstimate
                 priceLevel={restaurant.price_level}
                 avgPrice={restaurant.avg_price_per_person}
+                googlePriceLevel={details?.price_level}
               />
               {detailsLoading ? (
                 <DetailsLoadingSkeleton />

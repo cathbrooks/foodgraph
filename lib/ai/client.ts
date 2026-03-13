@@ -6,7 +6,7 @@ let _client: ChatOpenAI | null = null;
 export function getOpenAIClient(): ChatOpenAI {
   if (!_client) {
     _client = new ChatOpenAI({
-      modelName: "gpt-4o",
+      modelName: "gpt-5-mini-2025-08-07",
       temperature: 0,
       openAIApiKey: getServerEnv().OPENAI_API_KEY,
     });

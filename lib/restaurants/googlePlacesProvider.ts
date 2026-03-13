@@ -17,6 +17,7 @@ const DETAILS_FIELD_MASK = [
   "websiteUri",
   "googleMapsUri",
   "location",
+  "priceLevel",
   "dineIn",
   "delivery",
   "takeout",
@@ -31,12 +32,18 @@ function getApiKey(): string {
   return key;
 }
 
+function sanitizeAddress(raw: string): string {
+  return raw.replace(/\s*\([^)]*\)/g, "").trim();
+}
+
 export async function findGooglePlaceId(
   name: string,
   address: string
 ): Promise<string | null> {
   const apiKey = getApiKey();
   if (!apiKey) return null;
+
+  const cleanAddress = sanitizeAddress(address);
 
   const res = await fetch(`${GOOGLE_BASE}/places:searchText`, {
     method: "POST",
@@ -46,7 +53,7 @@ export async function findGooglePlaceId(
       "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
     },
     body: JSON.stringify({
-      textQuery: `${name}, ${address}`,
+      textQuery: `${name}, ${cleanAddress}`,
       includedType: "restaurant",
       maxResultCount: 1,
     }),
@@ -59,7 +66,28 @@ export async function findGooglePlaceId(
   }
 
   const data = (await res.json()) as { places?: Array<{ id?: string }> };
-  return data.places?.[0]?.id ?? null;
+
+  if (data.places?.[0]?.id) {
+    return data.places[0].id;
+  }
+
+  const retryRes = await fetch(`${GOOGLE_BASE}/places:searchText`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
+    },
+    body: JSON.stringify({
+      textQuery: `${name}, ${cleanAddress}`,
+      maxResultCount: 1,
+    }),
+  });
+
+  if (!retryRes.ok) return null;
+
+  const retryData = (await retryRes.json()) as { places?: Array<{ id?: string }> };
+  return retryData.places?.[0]?.id ?? null;
 }
 
 interface GooglePlaceDetailsRaw {
@@ -85,9 +113,18 @@ interface GooglePlaceDetailsRaw {
   delivery?: boolean;
   takeout?: boolean;
   reservable?: boolean;
+  priceLevel?: string;
   servesVegetarianFood?: boolean;
   photos?: Array<{ name?: string }>;
 }
+
+const GOOGLE_PRICE_LEVEL_MAP: Record<string, string> = {
+  PRICE_LEVEL_FREE: "Free",
+  PRICE_LEVEL_INEXPENSIVE: "$",
+  PRICE_LEVEL_MODERATE: "$$",
+  PRICE_LEVEL_EXPENSIVE: "$$$",
+  PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
+};
 
 function mapGoogleReviews(
   raw: GooglePlaceDetailsRaw["reviews"]
@@ -136,6 +173,7 @@ function mapToPlaceDetails(
     reviews: mapGoogleReviews(data.reviews),
     opening_hours: data.regularOpeningHours?.weekdayDescriptions ?? null,
     is_open_now: data.regularOpeningHours?.openNow ?? null,
+    price_level: data.priceLevel ? (GOOGLE_PRICE_LEVEL_MAP[data.priceLevel] ?? null) : null,
     dine_in: data.dineIn ?? null,
     delivery: data.delivery ?? null,
     takeout: data.takeout ?? null,
@@ -179,6 +217,7 @@ const EMPTY_DETAILS: PlaceDetails = {
   reviews: [],
   opening_hours: null,
   is_open_now: null,
+  price_level: null,
   dine_in: null,
   delivery: null,
   takeout: null,

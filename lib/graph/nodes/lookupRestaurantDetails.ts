@@ -59,6 +59,7 @@ export async function lookupRestaurantDetails(
       reviews: placeDetails.reviews,
       opening_hours: placeDetails.opening_hours,
       is_open_now: placeDetails.is_open_now,
+      price_level: placeDetails.price_level,
       dine_in: placeDetails.dine_in,
       delivery: placeDetails.delivery,
       takeout: placeDetails.takeout,

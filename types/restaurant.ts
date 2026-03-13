@@ -41,6 +41,7 @@ export interface PlaceDetails {
   reviews: GoogleReview[];
   opening_hours: string[] | null;
   is_open_now: boolean | null;
+  price_level: string | null;
   dine_in: boolean | null;
   delivery: boolean | null;
   takeout: boolean | null;

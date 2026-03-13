@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/Spinner";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/chat";
+  const next = searchParams.get("next") ?? "/onboarding/welcome?from=login";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

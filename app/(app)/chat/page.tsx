@@ -4,8 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "@/lib/hooks/useLocation";
 import { useNewChatListener } from "@/lib/hooks/useNewChat";
 import { trackAction } from "@/lib/hooks/useTrackAction";
-import type { ChatMessage, BudgetChoice, RecommendationContext, SessionState, RestaurantDetails, StateUpdates } from "@/types/chat";
-import { EMPTY_SESSION_STATE } from "@/types/chat";
+import { useChatStore } from "@/lib/stores/chatStore";
+import type { ChatMessage, BudgetChoice, RecommendationContext, RestaurantDetails } from "@/types/chat";
 import type { ScoredRecommendation } from "@/types/recommendation";
 import type { PlaceDetails } from "@/types/restaurant";
 import type { LayoutProps } from "@/components/layouts/types";
@@ -49,66 +49,48 @@ const BUDGET_CHIPS = [
 const ActiveLayout = Layout4;
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messages = useChatStore((s) => s.messages);
+  const setMessages = useChatStore((s) => s.setMessages);
+  const lastRecommendations = useChatStore((s) => s.lastRecommendations);
+  const setLastRecommendations = useChatStore((s) => s.setLastRecommendations);
+  const sessionState = useChatStore((s) => s.sessionState);
+  const setSessionState = useChatStore((s) => s.setSessionState);
+  const mergeStateUpdates = useChatStore((s) => s.mergeStateUpdates);
+  const placeDetails = useChatStore((s) => s.placeDetails);
+  const setPlaceDetails = useChatStore((s) => s.setPlaceDetails);
+  const selectedPlaceId = useChatStore((s) => s.selectedPlaceId);
+  const setSelectedPlaceId = useChatStore((s) => s.setSelectedPlaceId);
+  const confirmedBudget = useChatStore((s) => s.confirmedBudget);
+  const setConfirmedBudget = useChatStore((s) => s.setConfirmedBudget);
+  const dynamicLabels = useChatStore((s) => s.dynamicLabels);
+  const setDynamicLabels = useChatStore((s) => s.setDynamicLabels);
+  const greeting = useChatStore((s) => s.greeting);
+  const setGreeting = useChatStore((s) => s.setGreeting);
+  const resetStore = useChatStore((s) => s.reset);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [lastEventId, setLastEventId] = useState<string | null>(null);
-  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const [placeDetails, setPlaceDetails] = useState<Record<string, PlaceDetails>>({});
   const [detailsLoading, setDetailsLoading] = useState<string | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
-  const [lastRecommendations, setLastRecommendations] = useState<RecommendationContext[]>([]);
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingBudgetConfirmation | null>(null);
   const [showBudgetChips, setShowBudgetChips] = useState(false);
   const [budgetPromptLoading, setBudgetPromptLoading] = useState(false);
-  const [dynamicLabels, setDynamicLabels] = useState<string[]>(DEFAULT_DYNAMIC_LABELS);
-  const [greeting, setGreeting] = useState("Hungry?");
-  const [sessionState, setSessionState] = useState<SessionState>({ ...EMPTY_SESSION_STATE });
-  const [confirmedBudget, setConfirmedBudget] = useState<{
-    choice: BudgetChoice;
-    customCeiling: number | null;
-  } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { location, status, error: locError, requestLocation } = useLocation();
 
-  function mergeStateUpdates(updates: StateUpdates) {
-    if (!updates) return;
-    setSessionState((prev) => {
-      const next = { ...prev };
-      if (updates.restaurants) {
-        const existing = new Set(prev.restaurants.map((r) => r.place_id));
-        const newRecs = updates.restaurants.filter((r) => !existing.has(r.place_id));
-        next.restaurants = [...prev.restaurants, ...newRecs];
-      }
-      if (updates.restaurantDetails) {
-        next.restaurantDetails = { ...prev.restaurantDetails, ...updates.restaurantDetails };
-      }
-      if (updates.selectedRestaurant !== undefined) {
-        next.selectedRestaurant = updates.selectedRestaurant;
-      }
-      return next;
-    });
-  }
-
   const resetChat = useCallback(() => {
-    setMessages([]);
+    resetStore();
     setInput("");
     setLoading(false);
     setLastEventId(null);
-    setSelectedPlaceId(null);
-    setPlaceDetails({});
     setDetailsLoading(null);
     setExpandedMessages(new Set());
-    setLastRecommendations([]);
     setPendingConfirmation(null);
     setShowBudgetChips(false);
     setBudgetPromptLoading(false);
-    setDynamicLabels(DEFAULT_DYNAMIC_LABELS);
-    setGreeting("Hungry?");
-    setSessionState({ ...EMPTY_SESSION_STATE });
-    setConfirmedBudget(null);
 
     fetch("/api/chat/welcome-chips", { method: "POST" })
       .then((res) => (res.ok ? res.json() : null))
@@ -121,7 +103,7 @@ export default function ChatPage() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [resetStore, setDynamicLabels, setGreeting]);
 
   useNewChatListener(resetChat);
 
@@ -130,6 +112,7 @@ export default function ChatPage() {
   }, [requestLocation]);
 
   useEffect(() => {
+    if (messages.length > 0) return;
     let cancelled = false;
     fetch("/api/chat/welcome-chips", { method: "POST" })
       .then((res) => (res.ok ? res.json() : null))
@@ -143,6 +126,7 @@ export default function ChatPage() {
       })
       .catch(() => {});
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -486,12 +470,14 @@ export default function ChatPage() {
           reviews: data.reviews,
           opening_hours: data.opening_hours,
           is_open_now: data.is_open_now,
+          price_level: data.price_level,
           dine_in: data.dine_in,
           delivery: data.delivery,
           takeout: data.takeout,
           reservable: data.reservable,
           serves_vegetarian: data.serves_vegetarian,
           photos: data.photos,
+          known_for: data.known_for,
         };
         setSessionState((prev) => ({
           ...prev,

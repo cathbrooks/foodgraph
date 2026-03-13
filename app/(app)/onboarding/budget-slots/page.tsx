@@ -41,7 +41,7 @@ export default function OnboardingBudgetSlotsPage() {
   }
 
   function handleFinish() {
-    router.push("/chat");
+    router.push("/onboarding/welcome");
   }
 
   return (
