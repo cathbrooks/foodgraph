@@ -1,0 +1,53 @@
+import { z } from "zod";
+
+const serverSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  FOURSQUARE_API_KEY: z.string().min(1),
+  OPENAI_API_KEY: z.string().min(1),
+});
+
+const clientSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+});
+
+export type ServerEnv = z.infer<typeof serverSchema>;
+export type ClientEnv = z.infer<typeof clientSchema>;
+
+function validateServer(): ServerEnv {
+  const parsed = serverSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const missing = parsed.error.issues
+      .map((i) => i.path.join("."))
+      .join(", ");
+    throw new Error(
+      `Missing or invalid server environment variables: ${missing}. ` +
+        `Check your .env.local file.`
+    );
+  }
+  return parsed.data;
+}
+
+function validateClient(): ClientEnv {
+  const parsed = clientSchema.safeParse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  });
+  if (!parsed.success) {
+    const missing = parsed.error.issues
+      .map((i) => i.path.join("."))
+      .join(", ");
+    throw new Error(
+      `Missing or invalid client environment variables: ${missing}. ` +
+        `Check your .env.local file.`
+    );
+  }
+  return parsed.data;
+}
+
+export const serverEnv =
+  typeof window === "undefined" ? validateServer() : (undefined as never);
+
+export const clientEnv = validateClient();
