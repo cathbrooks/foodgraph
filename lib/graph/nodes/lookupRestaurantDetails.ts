@@ -1,7 +1,6 @@
 import type { RecommendationState } from "../state";
 import type { RestaurantDetails, RecommendationContext } from "@/types/chat";
 import { getPlaceDetails } from "@/lib/restaurants/restaurantProvider";
-import { fetchRestaurantInsights } from "@/lib/ai/searchPreview";
 
 function findTargetRestaurant(
   state: RecommendationState
@@ -47,25 +46,26 @@ export async function lookupRestaurantDetails(
   }
 
   try {
-    const [placeDetails, insights] = await Promise.all([
-      getPlaceDetails(target.place_id),
-      fetchRestaurantInsights(
-        target.restaurant_name,
-        ""
-      ).catch(() => null),
-    ]);
+    const placeDetails = await getPlaceDetails(target.place_id, target.restaurant_name, "");
 
     const details: RestaurantDetails = {
       place_id: target.place_id,
       name: target.restaurant_name,
-      summary: insights?.summary ?? null,
-      knownFor: insights?.knownFor ?? [],
-      atmosphere: insights?.atmosphere ?? null,
-      hours: insights?.hours ?? null,
-      specials: insights?.specials ?? null,
-      reviews: insights?.reviews ?? null,
       website_url: placeDetails.website_url,
-      menu_url: placeDetails.menu_url,
+      google_maps_url: placeDetails.google_maps_url,
+      google_place_id: placeDetails.google_place_id,
+      location: placeDetails.location,
+      editorial_summary: placeDetails.editorial_summary,
+      reviews: placeDetails.reviews,
+      opening_hours: placeDetails.opening_hours,
+      is_open_now: placeDetails.is_open_now,
+      dine_in: placeDetails.dine_in,
+      delivery: placeDetails.delivery,
+      takeout: placeDetails.takeout,
+      reservable: placeDetails.reservable,
+      serves_vegetarian: placeDetails.serves_vegetarian,
+      photos: placeDetails.photos,
+      known_for: placeDetails.known_for,
     };
 
     return { lookedUpDetails: details };

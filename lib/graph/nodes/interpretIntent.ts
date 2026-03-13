@@ -67,6 +67,7 @@ export async function interpretIntent(
       constraints: {
         cuisineFilter: parsed.data.constraints.cuisineFilter ?? undefined,
         priceCeiling: parsed.data.constraints.priceCeiling ?? undefined,
+        priceFloor: parsed.data.constraints.priceFloor ?? undefined,
         requestedWildcard: parsed.data.constraints.requestedWildcard,
         dietaryFilter: parsed.data.constraints.dietaryFilter ?? undefined,
         targetRestaurant: parsed.data.constraints.targetRestaurant ?? undefined,

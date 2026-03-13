@@ -1,6 +1,8 @@
 import type { ScoredRecommendation } from "@/types/recommendation";
-import type { PlaceDetails, RestaurantInsights } from "@/lib/restaurants/restaurantProvider";
+import type { PlaceDetails, PriceLevel } from "@/types/restaurant";
+import type { GoogleReview } from "@/types/restaurant";
 import { Card, Spinner } from "@/components/ui";
+import { NavigationSection } from "./NavigationSection";
 
 interface RestaurantCardProps {
   recommendation: ScoredRecommendation;
@@ -17,15 +19,7 @@ const WebsiteIcon = () => (
   </svg>
 );
 
-const MenuIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-  </svg>
-);
-
-const linkClasses = "inline-flex items-center gap-1.5 text-xs font-medium text-black bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md transition-colors";
-
-function InsightsLoadingSkeleton() {
+function DetailsLoadingSkeleton() {
   return (
     <div className="space-y-2.5 animate-pulse">
       <div className="h-3 bg-gray-100 rounded w-full" />
@@ -37,56 +31,208 @@ function InsightsLoadingSkeleton() {
       </div>
       <div className="h-3 bg-gray-100 rounded w-2/3 mt-2" />
       <div className="h-3 bg-gray-100 rounded w-3/4" />
+      <div className="h-[100px] bg-gray-100 rounded mt-2" />
     </div>
   );
 }
 
-function InsightRow({ label, value }: { label: string; value: string }) {
+function ServiceTags({ details }: { details: PlaceDetails }) {
+  const tags: string[] = [];
+  if (details.dine_in) tags.push("Dine-in");
+  if (details.delivery) tags.push("Delivery");
+  if (details.takeout) tags.push("Takeout");
+  if (details.reservable) tags.push("Reservable");
+  if (details.serves_vegetarian) tags.push("Vegetarian options");
+
+  if (tags.length === 0) return null;
+
   return (
-    <div className="flex gap-2 text-xs">
-      <span className="text-gray-400 shrink-0 w-20">{label}</span>
-      <span className="text-gray-600">{value}</span>
+    <div className="flex flex-wrap gap-1.5">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="text-xs bg-gray-50 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full"
+        >
+          {tag}
+        </span>
+      ))}
     </div>
   );
 }
 
-function InsightsPanel({ insights }: { insights: RestaurantInsights }) {
+function KnownForSection({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+
   return (
-    <div className="space-y-2.5">
-      {insights.summary && (
-        <p className="text-sm text-gray-700 leading-relaxed">{insights.summary}</p>
-      )}
+    <div className="space-y-1">
+      <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+        Known For
+      </h4>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <span
+            key={item}
+            className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-      {insights.knownFor.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {insights.knownFor.map((item) => (
-            <span
-              key={item}
-              className="text-xs bg-gray-50 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-full"
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-      )}
+function OpeningHours({ details }: { details: PlaceDetails }) {
+  if (!details.opening_hours || details.opening_hours.length === 0) return null;
 
-      <div className="space-y-1.5">
-        {insights.atmosphere && (
-          <InsightRow label="Atmosphere" value={insights.atmosphere} />
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const todayHours = details.opening_hours.find((h) =>
+    h.toLowerCase().startsWith(today.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        {details.is_open_now != null && (
+          <span
+            className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+              details.is_open_now
+                ? "bg-green-50 text-green-700"
+                : "bg-red-50 text-red-700"
+            }`}
+          >
+            {details.is_open_now ? "Open now" : "Closed"}
+          </span>
         )}
-        {insights.hours && (
-          <InsightRow label="Hours" value={insights.hours} />
-        )}
-        {insights.specials && (
-          <InsightRow label="Specials" value={insights.specials} />
-        )}
-        {insights.reviews && (
-          <InsightRow label="Reviews" value={insights.reviews} />
+        {todayHours && (
+          <span className="text-xs text-gray-500">{todayHours}</span>
         )}
       </div>
     </div>
   );
 }
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <span className="text-xs text-amber-500">
+      {"★".repeat(Math.round(rating))}
+      {"☆".repeat(5 - Math.round(rating))}
+    </span>
+  );
+}
+
+function ReviewCard({ review }: { review: GoogleReview }) {
+  return (
+    <div className="space-y-1 py-2 border-b border-gray-50 last:border-0">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-gray-700">{review.author}</span>
+        <span className="text-xs text-gray-400">{review.relative_time}</span>
+      </div>
+      <StarRating rating={review.rating} />
+      {review.text && (
+        <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+          {review.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ReviewsSection({
+  reviews,
+  googleMapsUrl,
+}: {
+  reviews: GoogleReview[];
+  googleMapsUrl?: string | null;
+}) {
+  if (reviews.length === 0) return null;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+          Reviews
+        </h4>
+        {googleMapsUrl && (
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            See all on Google &rarr;
+          </a>
+        )}
+      </div>
+      <div className="divide-y divide-gray-50">
+        {reviews.slice(0, 2).map((review, i) => (
+          <ReviewCard key={`${review.author}-${i}`} review={review} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const PRICE_RANGES: Record<string, string> = {
+  $: "$5 – $15",
+  $$: "$15 – $30",
+  $$$: "$30 – $60",
+  $$$$: "$60+",
+};
+
+function PriceEstimate({
+  priceLevel,
+  avgPrice,
+}: {
+  priceLevel: PriceLevel | null;
+  avgPrice: number | null;
+}) {
+  if (!priceLevel && avgPrice == null) return null;
+
+  return (
+    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+      <span className="text-sm">💰</span>
+      <div className="text-sm text-emerald-800">
+        <span className="font-medium">Estimated cost: </span>
+        {avgPrice != null ? (
+          <span>~${avgPrice} per person</span>
+        ) : priceLevel ? (
+          <span>{PRICE_RANGES[priceLevel]} per person</span>
+        ) : null}
+        {priceLevel && <span className="text-emerald-600 ml-1.5">({priceLevel})</span>}
+      </div>
+    </div>
+  );
+}
+
+function DetailsPanel({ details }: { details: PlaceDetails }) {
+  return (
+    <div className="space-y-3">
+      {details.editorial_summary && (
+        <p className="text-sm text-gray-700 leading-relaxed">
+          {details.editorial_summary}
+        </p>
+      )}
+
+      <KnownForSection items={details.known_for} />
+      <ServiceTags details={details} />
+      <OpeningHours details={details} />
+      <ReviewsSection reviews={details.reviews} googleMapsUrl={details.google_maps_url} />
+
+      {details.location && (
+        <NavigationSection
+          location={details.location}
+          googlePlaceId={details.google_place_id}
+          googleMapsUrl={details.google_maps_url}
+        />
+      )}
+    </div>
+  );
+}
+
+const linkClasses =
+  "inline-flex items-center gap-1.5 text-xs font-medium text-black bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md transition-colors";
 
 export function RestaurantCard({
   recommendation,
@@ -151,50 +297,39 @@ export function RestaurantCard({
 
         {selected && (() => {
           const websiteUrl = restaurant.website_url ?? details?.website_url;
-          const menuUrl = details?.menu_url;
-          const hasLinks = websiteUrl || menuUrl;
-          const insights = details?.insights ?? null;
 
           return (
             <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+              <PriceEstimate
+                priceLevel={restaurant.price_level}
+                avgPrice={restaurant.avg_price_per_person}
+              />
               {detailsLoading ? (
-                <InsightsLoadingSkeleton />
-              ) : insights ? (
-                <InsightsPanel insights={insights} />
+                <DetailsLoadingSkeleton />
+              ) : details ? (
+                <DetailsPanel details={details} />
               ) : null}
 
-              {hasLinks ? (
+              {websiteUrl && !detailsLoading && (
                 <div className="flex gap-3">
-                  {websiteUrl && (
-                    <a
-                      href={websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className={linkClasses}
-                    >
-                      <WebsiteIcon />
-                      Website
-                    </a>
-                  )}
-                  {menuUrl && (
-                    <a
-                      href={menuUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className={linkClasses}
-                    >
-                      <MenuIcon />
-                      Menu
-                    </a>
-                  )}
+                  <a
+                    href={websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className={linkClasses}
+                  >
+                    <WebsiteIcon />
+                    Website
+                  </a>
                 </div>
-              ) : !detailsLoading && !insights ? (
+              )}
+
+              {!detailsLoading && !details && (
                 <p className="text-xs text-gray-400">
                   No additional info available for this restaurant.
                 </p>
-              ) : null}
+              )}
             </div>
           );
         })()}

@@ -8,7 +8,7 @@ import {
 } from "@/lib/chat/explanationPrompt";
 import { withTimeout } from "@/lib/ai/timeout";
 
-const LLM_TIMEOUT_MS = 3000;
+const LLM_TIMEOUT_MS = 10_000;
 
 export async function generateExplanations(
   state: RecommendationState
@@ -29,13 +29,17 @@ export async function generateExplanations(
     );
 
     const response = await withTimeout(
-      llm.invoke([{ role: "user", content: prompt }]),
+      llm.invoke([{ role: "user", content: prompt }], {
+        response_format: { type: "json_object" },
+      }),
       LLM_TIMEOUT_MS
     );
-    const text =
+
+    let text =
       typeof response.content === "string"
         ? response.content
         : JSON.stringify(response.content);
+    text = text.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
 
     const parsed = ExplanationResponseSchema.safeParse(JSON.parse(text));
     if (parsed.success) {

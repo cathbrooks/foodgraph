@@ -10,6 +10,7 @@ export interface ScoringContext {
   userLocationLat: number;
   userLocationLng: number;
   personalization?: PersonalizationHints | null;
+  priceFloor?: number;
 }
 
 const WEIGHTS = {
@@ -36,7 +37,7 @@ export function scoreRestaurants(
 }
 
 function computeScore(r: Restaurant, ctx: ScoringContext): ScoreBreakdown {
-  const budget_fit = scoreBudgetFit(r, ctx.budget);
+  const budget_fit = scoreBudgetFit(r, ctx.budget, ctx.priceFloor);
   const cuisine_match = scoreCuisineMatch(r, ctx.preferences, ctx.personalization);
   const distance = scoreDistance(r);
   const rating = scoreRating(r);
@@ -59,7 +60,17 @@ function computeScore(r: Restaurant, ctx: ScoringContext): ScoreBreakdown {
   };
 }
 
-function scoreBudgetFit(r: Restaurant, budget: BudgetSlot | null): number {
+function scoreBudgetFit(r: Restaurant, budget: BudgetSlot | null, priceFloor?: number): number {
+  if (priceFloor != null) {
+    if (r.avg_price_per_person != null) {
+      if (r.avg_price_per_person >= priceFloor) return Math.min(1, 0.7 + (r.avg_price_per_person - priceFloor) / 100);
+      return 0.2;
+    }
+    const priceLevelValues: Record<string, number> = { "$": 0.1, "$$": 0.3, "$$$": 0.7, "$$$$": 1.0 };
+    if (r.price_level != null) return priceLevelValues[r.price_level] ?? 0.5;
+    return 0.6;
+  }
+
   if (!budget || r.avg_price_per_person == null) return 0.5;
 
   const midBudget = (budget.min_budget + budget.max_budget) / 2;

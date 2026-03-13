@@ -24,6 +24,7 @@ export type IntentType =
 export interface IntentConstraints {
   cuisineFilter?: string;
   priceCeiling?: number;
+  priceFloor?: number;
   requestedWildcard?: boolean;
   dietaryFilter?: string;
   targetRestaurant?: string;

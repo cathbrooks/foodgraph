@@ -54,6 +54,7 @@ export async function filterAndScore(
     requireOpenNow: true,
     cuisineOverride: constraints.cuisineFilter,
     dietaryOverride: constraints.dietaryFilter,
+    priceFloor: constraints.priceFloor,
   });
 
   console.log("[filterAndScore] filtered:", filtered.length);
@@ -68,6 +69,7 @@ export async function filterAndScore(
     userLocationLat: state.location.lat,
     userLocationLng: state.location.lng,
     personalization: state.personalization,
+    priceFloor: constraints.priceFloor,
   }, 10);
 
   return { filtered, scored };

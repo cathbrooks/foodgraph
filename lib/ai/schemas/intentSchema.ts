@@ -21,6 +21,11 @@ export const IntentConstraintsSchema = z.object({
     .nullable()
     .optional()
     .describe("Maximum price per person the user wants to spend. Null if not specified."),
+  priceFloor: z
+    .number()
+    .nullable()
+    .optional()
+    .describe("Minimum price per person for upscale/fancy requests. Null if not specified."),
   requestedWildcard: z
     .boolean()
     .optional()

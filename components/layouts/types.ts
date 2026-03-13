@@ -1,6 +1,6 @@
 import type { ChatMessage, BudgetChoice, RecommendationContext } from "@/types/chat";
 import type { ScoredRecommendation } from "@/types/recommendation";
-import type { PlaceDetails } from "@/lib/restaurants/restaurantProvider";
+import type { PlaceDetails } from "@/types/restaurant";
 
 export interface LayoutProps {
   messages: ChatMessage[];

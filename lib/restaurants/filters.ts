@@ -9,6 +9,7 @@ export interface FilterOptions {
   requireOpenNow?: boolean;
   cuisineOverride?: string;
   dietaryOverride?: string;
+  priceFloor?: number;
 }
 
 export function filterRestaurants(
@@ -48,6 +49,17 @@ export function filterRestaurants(
       );
     });
     console.log(`[filter] after budget ($${options.budget.min_budget}–$${options.budget.max_budget}): ${result.length}`);
+  }
+
+  if (options.priceFloor != null) {
+    const floor = options.priceFloor;
+    const priceLevelMinima: Record<string, number> = { "$": 0, "$$": 15, "$$$": 30, "$$$$": 50 };
+    result = result.filter((r) => {
+      if (r.avg_price_per_person != null) return r.avg_price_per_person >= floor;
+      if (r.price_level != null) return (priceLevelMinima[r.price_level] ?? 0) >= floor * 0.6;
+      return true;
+    });
+    console.log(`[filter] after priceFloor ($${floor}): ${result.length}`);
   }
 
   if (options.maxDistanceKm != null) {

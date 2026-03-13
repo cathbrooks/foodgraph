@@ -47,14 +47,21 @@ function buildFollowupSystemPrompt(
   if (detailEntries.length > 0) {
     const lines = detailEntries.map((d) => {
       const parts = [`**${d.name}**`];
-      if (d.summary) parts.push(`Summary: ${d.summary}`);
-      if (d.knownFor.length > 0) parts.push(`Known for: ${d.knownFor.join(", ")}`);
-      if (d.atmosphere) parts.push(`Atmosphere: ${d.atmosphere}`);
-      if (d.hours) parts.push(`Hours: ${d.hours}`);
-      if (d.specials) parts.push(`Specials: ${d.specials}`);
-      if (d.reviews) parts.push(`Reviews: ${d.reviews}`);
+      if (d.editorial_summary) parts.push(`Summary: ${d.editorial_summary}`);
+      if (d.known_for?.length) parts.push(`Known for: ${d.known_for.join(", ")}`);
+      if (d.opening_hours?.length) parts.push(`Hours: ${d.opening_hours.join("; ")}`);
+      if (d.is_open_now != null) parts.push(`Currently: ${d.is_open_now ? "Open" : "Closed"}`);
+      if (d.reviews.length > 0) {
+        const snippets = d.reviews.slice(0, 3).map((r) => `${r.author} (${r.rating}★): "${r.text.slice(0, 80)}"`);
+        parts.push(`Reviews: ${snippets.join(" | ")}`);
+      }
+      const services: string[] = [];
+      if (d.dine_in) services.push("dine-in");
+      if (d.delivery) services.push("delivery");
+      if (d.takeout) services.push("takeout");
+      if (d.reservable) services.push("reservable");
+      if (services.length > 0) parts.push(`Services: ${services.join(", ")}`);
       if (d.website_url) parts.push(`Website: ${d.website_url}`);
-      if (d.menu_url) parts.push(`Menu: ${d.menu_url}`);
       return parts.join("\n  ");
     });
     detailsBlock = `\n\nDetailed restaurant information:\n${lines.join("\n\n")}`;

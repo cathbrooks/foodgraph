@@ -1,14 +1,6 @@
 import type { Restaurant, Location, PriceLevel } from "@/types/restaurant";
 import { distanceKm } from "@/lib/utils/geo";
 
-export type { RestaurantInsights } from "@/lib/ai/searchPreview";
-
-export interface PlaceDetails {
-  website_url: string | null;
-  menu_url: string | null;
-  insights: import("@/lib/ai/searchPreview").RestaurantInsights | null;
-}
-
 export interface RestaurantSearchParams {
   location: Location;
   radiusKm: number;
@@ -53,6 +45,31 @@ const NON_FOOD_CATEGORY_NAMES = new Set([
   "dry cleaner",
   "car wash",
   "auto repair",
+  "boutique",
+  "clothing store",
+  "apparel",
+  "women's store",
+  "men's store",
+  "shoe store",
+  "shoes",
+  "jewelry store",
+  "jewelry",
+  "fashion accessories store",
+  "vintage and thrift store",
+  "thrift store",
+  "department store",
+  "sporting goods retail",
+  "board store",
+  "music venue",
+  "bath house",
+  "supermarket",
+  "grocery store",
+  "butcher",
+  "hair salon",
+  "cosmetics",
+  "gift store",
+  "laundry",
+  "laundry service",
 ]);
 
 const NON_FOOD_CATEGORY_KEYWORDS = [
@@ -105,6 +122,25 @@ const NON_FOOD_CATEGORY_KEYWORDS = [
   "veterinarian",
   "pet store",
   "kennel",
+  "boutique",
+  "clothing",
+  "apparel",
+  "fashion",
+  "jewelry",
+  "thrift",
+  "vintage",
+  "shoe store",
+  "sporting goods",
+  "board store",
+  "department store",
+  "cosmetics",
+  "gift store",
+  "grocery",
+  "supermarket",
+  "butcher",
+  "music venue",
+  "bath house",
+  "laundry",
 ];
 
 const PRICE_LEVELS: Record<number, PriceLevel> = {
@@ -353,53 +389,4 @@ function mapFoursquarePlace(raw: unknown, userLocation: Location): Restaurant {
   };
 }
 
-const FOURSQUARE_DETAIL_FIELDS = "website,menu";
-
-export async function getPlaceDetails(
-  fsqPlaceId: string
-): Promise<PlaceDetails> {
-  const empty: PlaceDetails = { website_url: null, menu_url: null, insights: null };
-
-  const apiKey = process.env.FOURSQUARE_API_KEY;
-  if (!apiKey || apiKey === "your-foursquare-api-key") {
-    return empty;
-  }
-
-  const url = new URL(
-    `https://places-api.foursquare.com/places/${encodeURIComponent(fsqPlaceId)}`
-  );
-  url.searchParams.set("fields", FOURSQUARE_DETAIL_FIELDS);
-
-  const headers = {
-    Accept: "application/json",
-    Authorization: `Bearer ${apiKey}`,
-    "X-Places-Api-Version": "2025-06-17",
-  };
-
-  let res: Response;
-  try {
-    res = await fetch(url.toString(), { method: "GET", headers });
-  } catch (err) {
-    console.error("Foursquare place details network error:", err);
-    return empty;
-  }
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    console.error(`Foursquare place details error ${res.status}: ${text}`);
-    return empty;
-  }
-
-  let data: Record<string, unknown>;
-  try {
-    data = (await res.json()) as Record<string, unknown>;
-  } catch {
-    console.error("Foursquare place details returned invalid JSON");
-    return empty;
-  }
-
-  const website = typeof data.website === "string" ? data.website : null;
-  const menu = typeof data.menu === "string" ? data.menu : null;
-
-  return { website_url: website, menu_url: menu, insights: null };
-}
+export { getGooglePlaceDetails as getPlaceDetails } from "./googlePlacesProvider";

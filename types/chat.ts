@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LocationSchema } from "./restaurant";
+import { LocationSchema, GoogleReviewSchema } from "./restaurant";
 import { ScoredRecommendationSchema } from "./recommendation";
 
 export const ChatMessageRoleSchema = z.enum(["user", "assistant"]);
@@ -41,14 +41,21 @@ export type RecommendationContext = z.infer<typeof RecommendationContextSchema>;
 export const RestaurantDetailsSchema = z.object({
   place_id: z.string(),
   name: z.string(),
-  summary: z.string().nullable(),
-  knownFor: z.array(z.string()),
-  atmosphere: z.string().nullable(),
-  hours: z.string().nullable(),
-  specials: z.string().nullable(),
-  reviews: z.string().nullable(),
   website_url: z.string().nullable(),
-  menu_url: z.string().nullable(),
+  google_maps_url: z.string().nullable(),
+  google_place_id: z.string().nullable(),
+  location: LocationSchema.nullable(),
+  editorial_summary: z.string().nullable(),
+  reviews: z.array(GoogleReviewSchema),
+  opening_hours: z.array(z.string()).nullable(),
+  is_open_now: z.boolean().nullable(),
+  dine_in: z.boolean().nullable(),
+  delivery: z.boolean().nullable(),
+  takeout: z.boolean().nullable(),
+  reservable: z.boolean().nullable(),
+  serves_vegetarian: z.boolean().nullable(),
+  photos: z.array(z.string()),
+  known_for: z.array(z.string()),
 });
 
 export type RestaurantDetails = z.infer<typeof RestaurantDetailsSchema>;

@@ -7,7 +7,7 @@ import { trackAction } from "@/lib/hooks/useTrackAction";
 import type { ChatMessage, BudgetChoice, RecommendationContext, SessionState, RestaurantDetails, StateUpdates } from "@/types/chat";
 import { EMPTY_SESSION_STATE } from "@/types/chat";
 import type { ScoredRecommendation } from "@/types/recommendation";
-import type { PlaceDetails } from "@/lib/restaurants/restaurantProvider";
+import type { PlaceDetails } from "@/types/restaurant";
 import type { LayoutProps } from "@/components/layouts/types";
 import { Layout4 } from "@/components/layouts";
 
@@ -478,14 +478,20 @@ export default function ChatPage() {
         const detailEntry: RestaurantDetails = {
           place_id: placeId,
           name: rec.restaurant.name,
-          summary: data.insights?.summary ?? null,
-          knownFor: data.insights?.knownFor ?? [],
-          atmosphere: data.insights?.atmosphere ?? null,
-          hours: data.insights?.hours ?? null,
-          specials: data.insights?.specials ?? null,
-          reviews: data.insights?.reviews ?? null,
           website_url: data.website_url,
-          menu_url: data.menu_url,
+          google_maps_url: data.google_maps_url,
+          google_place_id: data.google_place_id,
+          location: data.location,
+          editorial_summary: data.editorial_summary,
+          reviews: data.reviews,
+          opening_hours: data.opening_hours,
+          is_open_now: data.is_open_now,
+          dine_in: data.dine_in,
+          delivery: data.delivery,
+          takeout: data.takeout,
+          reservable: data.reservable,
+          serves_vegetarian: data.serves_vegetarian,
+          photos: data.photos,
         };
         setSessionState((prev) => ({
           ...prev,

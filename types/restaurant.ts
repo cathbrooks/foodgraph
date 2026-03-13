@@ -32,6 +32,33 @@ export const RestaurantSchema = z.object({
 
 export type Restaurant = z.infer<typeof RestaurantSchema>;
 
+export interface PlaceDetails {
+  website_url: string | null;
+  google_maps_url: string | null;
+  google_place_id: string | null;
+  location: Location | null;
+  editorial_summary: string | null;
+  reviews: GoogleReview[];
+  opening_hours: string[] | null;
+  is_open_now: boolean | null;
+  dine_in: boolean | null;
+  delivery: boolean | null;
+  takeout: boolean | null;
+  reservable: boolean | null;
+  serves_vegetarian: boolean | null;
+  photos: string[];
+  known_for: string[];
+}
+
+export const GoogleReviewSchema = z.object({
+  author: z.string(),
+  rating: z.number().min(1).max(5),
+  text: z.string(),
+  relative_time: z.string(),
+});
+
+export type GoogleReview = z.infer<typeof GoogleReviewSchema>;
+
 export const RestaurantCacheEntrySchema = z.object({
   id: z.string().uuid(),
   place_id: z.string(),

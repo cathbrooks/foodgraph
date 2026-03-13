@@ -1,0 +1,2 @@
+{"sessionId":"20d5cc","location":"generateExplanations.ts:post-llm","message":"LLM responded successfully","data":{"llmElapsedMs":7047},"timestamp":1773424067220,"hypothesisId":"H1,H3"}
+{"sessionId":"20d5cc","location":"generateExplanations.ts:parsed","message":"response parsed","data":{"parseSuccess":true,"responseLength":1701},"timestamp":1773424067220,"hypothesisId":"H4"}
