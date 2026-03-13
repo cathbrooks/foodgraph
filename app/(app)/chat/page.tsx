@@ -64,6 +64,10 @@ export default function ChatPage() {
   const [dynamicLabels, setDynamicLabels] = useState<string[]>(DEFAULT_DYNAMIC_LABELS);
   const [greeting, setGreeting] = useState("Hungry?");
   const [sessionState, setSessionState] = useState<SessionState>({ ...EMPTY_SESSION_STATE });
+  const [confirmedBudget, setConfirmedBudget] = useState<{
+    choice: BudgetChoice;
+    customCeiling: number | null;
+  } | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +108,7 @@ export default function ChatPage() {
     setDynamicLabels(DEFAULT_DYNAMIC_LABELS);
     setGreeting("Hungry?");
     setSessionState({ ...EMPTY_SESSION_STATE });
+    setConfirmedBudget(null);
 
     fetch("/api/chat/welcome-chips", { method: "POST" })
       .then((res) => (res.ok ? res.json() : null))
@@ -282,6 +287,7 @@ export default function ChatPage() {
     };
 
     addUserMessage(choiceLabels[choice]);
+    setConfirmedBudget({ choice, customCeiling });
     const { userMessage, includeWildcard } = pendingConfirmation;
     setPendingConfirmation(null);
     setShowBudgetChips(false);
@@ -383,7 +389,16 @@ export default function ChatPage() {
     setBudgetPromptLoading(false);
 
     if (intentType === "recommend" || intentType === "refine") {
-      await startBudgetConfirmation(text.trim());
+      if (confirmedBudget) {
+        addUserMessage(text.trim());
+        await fetchRecommendations(
+          text.trim(),
+          confirmedBudget.choice,
+          confirmedBudget.customCeiling
+        );
+      } else {
+        await startBudgetConfirmation(text.trim());
+      }
     } else {
       await sendDirectToChat(text.trim());
     }
