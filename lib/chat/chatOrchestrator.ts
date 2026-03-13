@@ -34,7 +34,15 @@ export async function handleChatRequest(
     timings: {},
   };
 
+  // #region agent log
+  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'chatOrchestrator.ts:before-invoke',message:'About to invoke graph',data:{budgetChoice:request.budget_choice,hasLocation:!!request.location},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
+
   const finalState = await recommendationGraph.invoke(initialState);
+
+  // #region agent log
+  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'chatOrchestrator.ts:after-invoke',message:'Graph completed',data:{hasResponse:!!finalState.response,earlyExitReason:finalState.earlyExitReason,responseIsNull:finalState.response===null,responseType:typeof finalState.response},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
 
   return finalState.response!;
 }

@@ -13,7 +13,8 @@ export async function resolveActiveSlot(
   const { data: slots } = await supabase
     .from("budget_slots")
     .select("*")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("hidden", false);
 
   if (!slots || slots.length === 0) return null;
 

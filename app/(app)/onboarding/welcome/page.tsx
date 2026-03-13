@@ -74,11 +74,11 @@ function WelcomeContent() {
             </svg>
           </div>
           <h1 className="text-3xl font-black tracking-tight text-gray-900">
-            {isReturning ? "Welcome back" : "You\u2019re all set"}
+            {isReturning ? "Welcome" : "You\u2019re all set"}
           </h1>
           <p className="text-gray-500 text-sm leading-relaxed">
             {isReturning
-              ? "A quick refresher on what Foodclaw can do."
+              ? "A quick guide on what Foodclaw can do."
               : "Here\u2019s how to get the most out of Foodclaw."}
           </p>
         </div>

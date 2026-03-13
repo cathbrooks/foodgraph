@@ -1,0 +1,6 @@
+{"sessionId":"f80711","location":"BudgetSlotCard.tsx:deleteClick","message":"Delete button clicked","data":{"slotId":"95ca77ed-a080-4b7a-9155-2109ee59e9f6","slotLabel":"weekday lunch"},"timestamp":1773428239283}
+{"sessionId":"f80711","location":"api/budget-slots/[id]/route.ts:DELETE","message":"DELETE handler entered","data":{"id":"95ca77ed-a080-4b7a-9155-2109ee59e9f6"},"timestamp":1773428239825}
+{"sessionId":"f80711","location":"api/budget-slots/[id]/route.ts:DELETE:result","message":"Supabase delete result","data":{"id":"95ca77ed-a080-4b7a-9155-2109ee59e9f6","error":null,"userId":"034f20a4-5b7c-474b-b9dc-002533bb9ba3"},"timestamp":1773428240149}
+{"sessionId":"f80711","location":"BudgetSlotCard.tsx:deleteClick","message":"Delete button clicked","data":{"slotId":"a4a3747b-5331-4ed0-bd1a-477110a8b9a0","slotLabel":"breakfast"},"timestamp":1773428245527}
+{"sessionId":"f80711","location":"api/budget-slots/[id]/route.ts:DELETE","message":"DELETE handler entered","data":{"id":"a4a3747b-5331-4ed0-bd1a-477110a8b9a0"},"timestamp":1773428245702}
+{"sessionId":"f80711","location":"api/budget-slots/[id]/route.ts:DELETE:result","message":"Supabase delete result","data":{"id":"a4a3747b-5331-4ed0-bd1a-477110a8b9a0","error":null,"userId":"034f20a4-5b7c-474b-b9dc-002533bb9ba3"},"timestamp":1773428245887}

@@ -29,6 +29,46 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     );
   }
 
+  if (parsed.data.hidden === false) {
+    const { data: current } = await supabase
+      .from("budget_slots")
+      .select("days, start_time, end_time")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (current) {
+      const days = (parsed.data.days ?? current.days) as string[];
+      const startTime = (parsed.data.start_time ?? current.start_time) as string;
+      const endTime = (parsed.data.end_time ?? current.end_time) as string;
+      const newStart = startTime.slice(0, 5);
+      const newEnd = endTime.slice(0, 5);
+
+      const { data: others } = await supabase
+        .from("budget_slots")
+        .select("days, start_time, end_time")
+        .eq("user_id", user.id)
+        .eq("hidden", false)
+        .neq("id", id);
+
+      if (others) {
+        for (const slot of others) {
+          const slotStart = (slot.start_time as string).slice(0, 5);
+          const slotEnd = (slot.end_time as string).slice(0, 5);
+          const sharedDays = days.filter((d) =>
+            (slot.days as string[]).includes(d),
+          );
+          if (sharedDays.length > 0 && newStart < slotEnd && slotStart < newEnd) {
+            return jsonError(
+              `Cannot unhide: overlaps with an active slot on ${sharedDays.join(", ")}`,
+              409,
+            );
+          }
+        }
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("budget_slots")
     .update({ ...parsed.data, updated_at: new Date().toISOString() })

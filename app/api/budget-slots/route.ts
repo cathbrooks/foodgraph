@@ -45,6 +45,30 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: existing } = await supabase
+    .from("budget_slots")
+    .select("days, start_time, end_time")
+    .eq("user_id", user.id)
+    .eq("hidden", false);
+
+  if (existing) {
+    const newStart = parsed.data.start_time.slice(0, 5);
+    const newEnd = parsed.data.end_time.slice(0, 5);
+    for (const slot of existing) {
+      const slotStart = (slot.start_time as string).slice(0, 5);
+      const slotEnd = (slot.end_time as string).slice(0, 5);
+      const sharedDays = parsed.data.days.filter((d: string) =>
+        (slot.days as string[]).includes(d),
+      );
+      if (sharedDays.length > 0 && newStart < slotEnd && slotStart < newEnd) {
+        return jsonError(
+          `Overlaps with an existing slot on ${sharedDays.join(", ")}`,
+          409,
+        );
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("budget_slots")
     .insert({ user_id: user.id, ...parsed.data })

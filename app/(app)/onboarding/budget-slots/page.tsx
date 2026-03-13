@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
 import { BudgetSlotForm } from "@/components/onboarding/BudgetSlotForm";
@@ -14,6 +14,19 @@ export default function OnboardingBudgetSlotsPage() {
   const [slots, setSlots] = useState<BudgetSlot[]>([]);
   const [showForm, setShowForm] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/budget-slots")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSlots(data);
+          setShowForm(false);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleAddSlot(data: CreateBudgetSlotInput) {
     setSaving(true);
@@ -40,6 +53,24 @@ export default function OnboardingBudgetSlotsPage() {
     setSlots((prev) => prev.filter((s) => s.id !== id));
   }
 
+  async function handleToggleHidden(id: string, currentlyHidden: boolean) {
+    setToggleError(null);
+    const res = await fetch(`/api/budget-slots/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hidden: !currentlyHidden }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setToggleError(body?.error ?? "Failed to update slot");
+      return;
+    }
+
+    const updated = await res.json();
+    setSlots((prev) => prev.map((s) => (s.id === id ? updated : s)));
+  }
+
   function handleFinish() {
     router.push("/onboarding/welcome");
   }
@@ -59,11 +90,15 @@ export default function OnboardingBudgetSlotsPage() {
 
       {slots.length > 0 && (
         <div className="space-y-3">
+          {toggleError && (
+            <p className="text-sm text-red-600">{toggleError}</p>
+          )}
           {slots.map((slot) => (
             <BudgetSlotCard
               key={slot.id}
               slot={slot}
               onDelete={() => handleDelete(slot.id)}
+              onToggleHidden={() => handleToggleHidden(slot.id, slot.hidden)}
             />
           ))}
         </div>
@@ -75,6 +110,13 @@ export default function OnboardingBudgetSlotsPage() {
           onCancel={slots.length > 0 ? () => setShowForm(false) : undefined}
           submitLabel="Add slot"
           loading={saving}
+          existingSlots={slots
+            .filter((s) => !s.hidden)
+            .map((s) => ({
+              days: s.days,
+              start_time: s.start_time,
+              end_time: s.end_time,
+            }))}
         />
       ) : (
         <div className="space-y-3">

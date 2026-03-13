@@ -26,6 +26,9 @@ function withErrorBoundary(name: string, fn: NodeFn): NodeFn {
         timings: { ...state.timings, [name]: Date.now() - start },
       };
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'recommendationGraph.ts:errorBoundary',message:`withErrorBoundary caught error in ${name}`,data:{nodeName:name,error:String(err),stack:(err as Error)?.stack},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.error(`Node "${name}" failed:`, err);
       return {
         earlyExitReason: "INTERNAL_ERROR",

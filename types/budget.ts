@@ -26,6 +26,7 @@ export const BudgetSlotSchema = z.object({
   end_time: TimeStringSchema,
   min_budget: z.number().min(0),
   max_budget: z.number().min(0),
+  hidden: z.boolean(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -53,6 +54,7 @@ export const UpdateBudgetSlotSchema = z.object({
   end_time: TimeStringSchema.optional(),
   min_budget: z.number().min(0).optional(),
   max_budget: z.number().min(0).optional(),
+  hidden: z.boolean().optional(),
 });
 
 export type UpdateBudgetSlotInput = z.infer<typeof UpdateBudgetSlotSchema>;
