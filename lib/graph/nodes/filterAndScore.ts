@@ -22,6 +22,7 @@ function resolveEffectiveBudget(state: RecommendationState): BudgetSlot | null {
       end_time: "23:59",
       min_budget: 0,
       max_budget: ceiling,
+      hidden: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     } as BudgetSlot;
