@@ -10,11 +10,6 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // #region agent log
-  console.error('[debug-7bdc60] POST /api/chat auth:', JSON.stringify({hasUser:!!user,userId:user?.id??null,emailConfirmed:user?.email_confirmed_at??null}));
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7bdc60'},body:JSON.stringify({sessionId:'7bdc60',location:'api/chat/route.ts:POST:auth',message:'chat POST getUser result',data:{hasUser:!!user,userId:user?.id??null,emailConfirmed:user?.email_confirmed_at??null},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
-
   if (!user) return jsonError("Unauthorized", 401);
 
   let body: unknown;

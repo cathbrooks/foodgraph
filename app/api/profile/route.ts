@@ -9,11 +9,6 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // #region agent log
-  console.error('[debug-7bdc60] GET /api/profile auth:', JSON.stringify({hasUser:!!user,userId:user?.id??null,emailConfirmed:user?.email_confirmed_at??null}));
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7bdc60'},body:JSON.stringify({sessionId:'7bdc60',location:'api/profile/route.ts:GET:auth',message:'getUser result',data:{hasUser:!!user,userId:user?.id??null,email:user?.email??null,emailConfirmed:user?.email_confirmed_at??null,role:user?.role??null},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
-
   if (!user) return jsonError("Unauthorized", 401);
 
   const [profileResult, prefsResult] = await Promise.all([
@@ -24,10 +19,6 @@ export async function GET() {
       .eq("user_id", user.id)
       .single(),
   ]);
-
-  // #region agent log
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7bdc60'},body:JSON.stringify({sessionId:'7bdc60',location:'api/profile/route.ts:GET:data',message:'profile+prefs query results',data:{profileData:profileResult.data,profileError:profileResult.error?.message??null,prefsData:prefsResult.data,prefsError:prefsResult.error?.message??null},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-  // #endregion
 
   return NextResponse.json({
     profile: profileResult.data ?? null,
@@ -40,11 +31,6 @@ export async function PUT(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  // #region agent log
-  console.error('[debug-7bdc60] PUT /api/profile auth:', JSON.stringify({hasUser:!!user,userId:user?.id??null,emailConfirmed:user?.email_confirmed_at??null}));
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7bdc60'},body:JSON.stringify({sessionId:'7bdc60',location:'api/profile/route.ts:PUT:auth',message:'PUT getUser result',data:{hasUser:!!user,userId:user?.id??null,email:user?.email??null,emailConfirmed:user?.email_confirmed_at??null},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-  // #endregion
 
   if (!user) return jsonError("Unauthorized", 401);
 
@@ -75,11 +61,6 @@ export async function PUT(request: Request) {
     )
     .select()
     .single();
-
-  // #region agent log
-  console.error('[debug-7bdc60] PUT /api/profile upsert:', JSON.stringify({hasData:!!data,error:error?.message??null,code:error?.code??null}));
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7bdc60'},body:JSON.stringify({sessionId:'7bdc60',location:'api/profile/route.ts:PUT:upsert',message:'upsert result',data:{hasData:!!data,error:error?.message??null,errorCode:error?.code??null},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-  // #endregion
 
   if (error) return jsonError(error.message, 500);
 
