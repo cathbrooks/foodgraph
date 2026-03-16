@@ -38,6 +38,11 @@ export default function SignupPage() {
       password,
     });
 
+    // #region agent log
+    console.log('[DEBUG-0dbf01] signUp result:', JSON.stringify({hasSession:!!data?.session,hasUser:!!data?.user,userId:data?.user?.id,emailConfirmedAt:data?.user?.email_confirmed_at,errorMsg:error?.message??null}));
+    fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0dbf01'},body:JSON.stringify({sessionId:'0dbf01',location:'signup/page.tsx:signUp',message:'signUp result',data:{hasSession:!!data?.session,hasUser:!!data?.user,userId:data?.user?.id,emailConfirmedAt:data?.user?.email_confirmed_at,errorMsg:error?.message??null},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     if (error) {
       setError(error.message);
       setLoading(false);
