@@ -8,146 +8,13 @@ export interface RestaurantSearchParams {
   maxResults?: number;
 }
 
-const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com/places/search";
+const GOOGLE_BASE = "https://places.googleapis.com/v1";
 
-const FOURSQUARE_CATEGORY_DINING = "13065";
-const FOURSQUARE_CATEGORY_FOOD = "13000";
-
-const NON_FOOD_CATEGORY_NAMES = new Set([
-  "bar",
-  "beer bar",
-  "beer garden",
-  "cocktail bar",
-  "dive bar",
-  "hotel bar",
-  "lounge",
-  "pub",
-  "wine bar",
-  "nightclub",
-  "park",
-  "dog park",
-  "playground",
-  "school",
-  "music school",
-  "gym",
-  "gym / fitness center",
-  "church",
-  "gas station",
-  "parking lot",
-  "bank",
-  "atm",
-  "hospital",
-  "doctor's office",
-  "dentist's office",
-  "pharmacy",
-  "post office",
-  "laundromat",
-  "dry cleaner",
-  "car wash",
-  "auto repair",
-  "boutique",
-  "clothing store",
-  "apparel",
-  "women's store",
-  "men's store",
-  "shoe store",
-  "shoes",
-  "jewelry store",
-  "jewelry",
-  "fashion accessories store",
-  "vintage and thrift store",
-  "thrift store",
-  "department store",
-  "sporting goods retail",
-  "board store",
-  "music venue",
-  "bath house",
-  "supermarket",
-  "grocery store",
-  "butcher",
-  "hair salon",
-  "cosmetics",
-  "gift store",
-  "laundry",
-  "laundry service",
-]);
-
-const NON_FOOD_CATEGORY_KEYWORDS = [
-  "park",
-  "playground",
-  "school",
-  "gym",
-  "fitness",
-  "church",
-  "temple",
-  "mosque",
-  "synagogue",
-  "gas station",
-  "petrol",
-  "parking",
-  "bank",
-  "atm",
-  "hospital",
-  "doctor",
-  "dentist",
-  "pharmacy",
-  "post office",
-  "laundromat",
-  "dry cleaner",
-  "car wash",
-  "auto repair",
-  "mechanic",
-  "salon",
-  "barber",
-  "spa",
-  "nail salon",
-  "real estate",
-  "office",
-  "library",
-  "museum",
-  "theater",
-  "cinema",
-  "stadium",
-  "arena",
-  "zoo",
-  "aquarium",
-  "hotel",
-  "motel",
-  "hostel",
-  "campground",
-  "storage",
-  "moving",
-  "plumber",
-  "electrician",
-  "veterinarian",
-  "pet store",
-  "kennel",
-  "boutique",
-  "clothing",
-  "apparel",
-  "fashion",
-  "jewelry",
-  "thrift",
-  "vintage",
-  "shoe store",
-  "sporting goods",
-  "board store",
-  "department store",
-  "cosmetics",
-  "gift store",
-  "grocery",
-  "supermarket",
-  "butcher",
-  "music venue",
-  "bath house",
-  "laundry",
-];
-
-const PRICE_LEVELS: Record<number, PriceLevel> = {
-  1: "$",
-  2: "$$",
-  3: "$$$",
-  4: "$$$$",
+const GOOGLE_PRICE_MAP: Record<string, PriceLevel> = {
+  PRICE_LEVEL_INEXPENSIVE: "$",
+  PRICE_LEVEL_MODERATE: "$$",
+  PRICE_LEVEL_EXPENSIVE: "$$$",
+  PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
 };
 
 const AVG_PRICE_MAP: Record<string, number> = {
@@ -157,82 +24,85 @@ const AVG_PRICE_MAP: Record<string, number> = {
   $$$$: 70,
 };
 
-const FOURSQUARE_CORE_FIELDS = [
-  "fsq_place_id",
-  "name",
-  "location",
-  "latitude",
-  "longitude",
-  "categories",
-  "distance",
-  "website",
+const GENERIC_TYPES = new Set([
+  "food",
+  "restaurant",
+  "establishment",
+  "point_of_interest",
+  "food_and_drink",
+]);
+
+const FIELD_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.location",
+  "places.types",
+  "places.priceLevel",
+  "places.rating",
+  "places.userRatingCount",
+  "places.regularOpeningHours",
+  "places.photos",
+  "places.websiteUri",
+  "places.primaryType",
+  "places.primaryTypeDisplayName",
 ].join(",");
 
-const FOURSQUARE_RICH_FIELDS = [
-  "rating",
-  "price",
-  "hours",
-  "photos",
-  "stats",
-].join(",");
+const DIETARY_KEYWORDS: Record<string, string[]> = {
+  vegetarian: ["vegetarian", "veggie", "vegan_restaurant", "vegetarian_restaurant"],
+  vegan: ["vegan", "vegan_restaurant"],
+  "gluten-free": ["gluten-free", "gluten free", "celiac"],
+  halal: ["halal"],
+  kosher: ["kosher"],
+  "dairy-free": ["dairy-free", "dairy free", "lactose-free"],
+};
 
-const USE_RICH_FIELDS = process.env.FOURSQUARE_RICH_FIELDS !== "false";
-
-const FOURSQUARE_FIELDS = USE_RICH_FIELDS
-  ? `${FOURSQUARE_CORE_FIELDS},${FOURSQUARE_RICH_FIELDS}`
-  : FOURSQUARE_CORE_FIELDS;
+function getApiKey(): string {
+  const key = process.env.GOOGLE_PLACES_API_KEY ?? "";
+  if (!key) console.warn("GOOGLE_PLACES_API_KEY is not configured");
+  return key;
+}
 
 export async function searchNearbyRestaurants(
   params: RestaurantSearchParams
 ): Promise<Restaurant[]> {
-  const apiKey = process.env.FOURSQUARE_API_KEY;
-  if (!apiKey || apiKey === "your-foursquare-api-key") {
-    console.warn("FOURSQUARE_API_KEY not configured — returning empty results");
-    return [];
-  }
+  const apiKey = getApiKey();
+  if (!apiKey) return [];
 
-  const { location, radiusKm, query, maxResults = 50 } = params;
-  const radiusMeters = Math.min(Math.round(radiusKm * 1000), 100000);
+  const { location, radiusKm } = params;
+  const radiusMeters = Math.min(Math.round(radiusKm * 1000), 50000);
 
-  const url = new URL(FOURSQUARE_BASE_URL);
-  url.searchParams.set("ll", `${location.lat},${location.lng}`);
-  url.searchParams.set("radius", String(radiusMeters));
-  url.searchParams.set("categories", query ? FOURSQUARE_CATEGORY_FOOD : FOURSQUARE_CATEGORY_DINING);
-  url.searchParams.set("limit", String(Math.min(maxResults, 50)));
-  url.searchParams.set("fields", FOURSQUARE_FIELDS);
-
-  if (query) {
-    url.searchParams.set("query", query);
-  }
-
-  const headers = {
-    Accept: "application/json",
-    Authorization: `Bearer ${apiKey}`,
-    "X-Places-Api-Version": "2025-06-17",
+  const body = {
+    includedTypes: ["restaurant"],
+    maxResultCount: 20,
+    rankPreference: "DISTANCE",
+    locationRestriction: {
+      circle: {
+        center: { latitude: location.lat, longitude: location.lng },
+        radius: radiusMeters,
+      },
+    },
   };
 
   let res: Response;
   try {
-    res = await fetch(url.toString(), { method: "GET", headers });
+    res = await fetch(`${GOOGLE_BASE}/places:searchNearby`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": FIELD_MASK,
+      },
+      body: JSON.stringify(body),
+    });
   } catch (err) {
-    console.error("Foursquare API network error:", err);
+    console.error("Google Places API network error:", err);
     return [];
-  }
-
-  if (res.status === 429 && USE_RICH_FIELDS) {
-    console.warn("Foursquare 429 with rich fields — retrying with core-only");
-    url.searchParams.set("fields", FOURSQUARE_CORE_FIELDS);
-    try {
-      res = await fetch(url.toString(), { method: "GET", headers });
-    } catch (err) {
-      console.error("Foursquare API network error (core retry):", err);
-      return [];
-    }
   }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    console.error(`Foursquare API error ${res.status}: ${text}`);
+    console.error(`Google Places API error ${res.status}: ${text}`);
     return [];
   }
 
@@ -240,55 +110,211 @@ export async function searchNearbyRestaurants(
   try {
     data = await res.json();
   } catch {
-    console.error("Foursquare API returned invalid JSON");
+    console.error("Google Places API returned invalid JSON");
     return [];
   }
 
-  const results = (data as Record<string, unknown>)?.results;
-  const places: unknown[] = Array.isArray(results) ? results : [];
+  const places = (data as Record<string, unknown>)?.places;
+  const results: unknown[] = Array.isArray(places) ? places : [];
 
-  return places
-    .filter(isFoodPlace)
-    .map((place) => mapFoursquarePlace(place, location));
+  return results.map((place) => mapGooglePlace(place, location, apiKey));
 }
 
-function isFoodPlace(raw: unknown): boolean {
-  const place = raw as Record<string, unknown>;
-  const categories = place.categories as
-    | Array<{ name?: string; short_name?: string }>
-    | undefined;
-  if (!Array.isArray(categories) || categories.length === 0) return false;
+const TEXT_SEARCH_FIELD_MASK = [FIELD_MASK, "nextPageToken"].join(",");
 
-  const names = categories.map(
-    (c) => (c.short_name ?? c.name ?? "").toLowerCase()
-  );
+const MIN_DESIRED_RESULTS = 10;
+const MAX_PAGES = 3;
 
-  if (names.some((n) => NON_FOOD_CATEGORY_NAMES.has(n))) return false;
+export async function searchTextRestaurants(
+  params: RestaurantSearchParams
+): Promise<Restaurant[]> {
+  const apiKey = getApiKey();
+  if (!apiKey) return [];
 
-  if (names.some((n) => NON_FOOD_CATEGORY_KEYWORDS.some((kw) => n.includes(kw)))) {
-    return false;
+  const { location, radiusKm, query } = params;
+  if (!query) return searchNearbyRestaurants(params);
+
+  const radiusMeters = Math.min(Math.round(radiusKm * 1000), 50000);
+
+  const body: Record<string, unknown> = {
+    textQuery: `${query} restaurant`,
+    includedType: "restaurant",
+    strictTypeFiltering: true,
+    openNow: true,
+    locationBias: {
+      circle: {
+        center: { latitude: location.lat, longitude: location.lng },
+        radius: radiusMeters,
+      },
+    },
+    pageSize: 20,
+  };
+
+  const all: Restaurant[] = [];
+  let pageToken: string | undefined;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    if (page > 0 && !pageToken) break;
+    if (page > 0) body.pageToken = pageToken;
+
+    let res: Response;
+    try {
+      res = await fetch(`${GOOGLE_BASE}/places:searchText`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      console.error("Google Text Search API network error:", err);
+      break;
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`Google Text Search API error ${res.status}: ${text}`);
+      break;
+    }
+
+    let data: Record<string, unknown>;
+    try {
+      data = (await res.json()) as Record<string, unknown>;
+    } catch {
+      console.error("Google Text Search API returned invalid JSON");
+      break;
+    }
+
+    const places = Array.isArray(data.places) ? data.places : [];
+    all.push(...(places as unknown[]).map((p) => mapGooglePlace(p, location, apiKey)));
+
+    pageToken = typeof data.nextPageToken === "string" ? data.nextPageToken : undefined;
+
+    if (all.length >= MIN_DESIRED_RESULTS || !pageToken) break;
   }
 
-  return true;
+  console.log(`[textSearch] query="${query}" fetched ${all.length} candidates across up to ${MAX_PAGES} pages`);
+  return all;
 }
 
-const DIETARY_KEYWORDS: Record<string, string[]> = {
-  vegetarian: ["vegetarian", "veggie"],
-  vegan: ["vegan"],
-  "gluten-free": ["gluten-free", "gluten free", "celiac"],
-  halal: ["halal"],
-  kosher: ["kosher"],
-  "dairy-free": ["dairy-free", "dairy free", "lactose-free"],
-};
+interface GooglePlace {
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: { latitude?: number; longitude?: number };
+  types?: string[];
+  priceLevel?: string;
+  rating?: number;
+  userRatingCount?: number;
+  regularOpeningHours?: { openNow?: boolean };
+  photos?: Array<{ name?: string }>;
+  websiteUri?: string;
+  primaryType?: string;
+  primaryTypeDisplayName?: { text?: string };
+}
+
+function mapGooglePlace(
+  raw: unknown,
+  userLocation: Location,
+  apiKey: string
+): Restaurant {
+  const place = raw as GooglePlace;
+
+  const placeId = place.id ?? "";
+  const name = place.displayName?.text ?? "Unknown";
+  const address = place.formattedAddress ?? "";
+
+  const restaurantLocation: Location = {
+    lat: place.location?.latitude ?? 0,
+    lng: place.location?.longitude ?? 0,
+  };
+
+  const priceLevel: PriceLevel | null =
+    place.priceLevel ? (GOOGLE_PRICE_MAP[place.priceLevel] ?? null) : null;
+  const avgPrice = priceLevel ? (AVG_PRICE_MAP[priceLevel] ?? null) : null;
+
+  const rating =
+    typeof place.rating === "number"
+      ? Math.round(place.rating * 10) / 10
+      : null;
+
+  const reviewCount =
+    typeof place.userRatingCount === "number" ? place.userRatingCount : null;
+
+  const cuisines = extractCuisines(place.types, place.primaryTypeDisplayName?.text);
+
+  const isOpenNow =
+    typeof place.regularOpeningHours?.openNow === "boolean"
+      ? place.regularOpeningHours.openNow
+      : null;
+
+  const dist =
+    restaurantLocation.lat !== 0
+      ? Math.round(distanceKm(userLocation, restaurantLocation) * 10) / 10
+      : null;
+
+  const firstPhoto = place.photos?.[0];
+  const photoUrl = firstPhoto?.name
+    ? `${GOOGLE_BASE}/${firstPhoto.name}/media?maxWidthPx=400&maxHeightPx=400&key=${apiKey}`
+    : null;
+
+  const websiteUrl =
+    typeof place.websiteUri === "string" && place.websiteUri.length > 0
+      ? place.websiteUri
+      : null;
+
+  return {
+    id: placeId,
+    place_id: placeId,
+    name,
+    address,
+    location: restaurantLocation,
+    price_level: priceLevel,
+    avg_price_per_person: avgPrice,
+    rating,
+    review_count: reviewCount,
+    cuisines,
+    dietary_tags: extractDietaryTags(place.types, name),
+    is_open_now: isOpenNow,
+    distance_km: dist,
+    photo_url: photoUrl,
+    website_url: websiteUrl,
+  };
+}
+
+function extractCuisines(
+  types: string[] | undefined,
+  primaryDisplayName: string | undefined
+): string[] {
+  const cuisines = new Set<string>();
+
+  if (primaryDisplayName && primaryDisplayName.toLowerCase() !== "restaurant") {
+    cuisines.add(primaryDisplayName);
+  }
+
+  if (Array.isArray(types)) {
+    for (const t of types) {
+      if (GENERIC_TYPES.has(t)) continue;
+      const formatted = t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      if (formatted.toLowerCase() !== "restaurant") {
+        cuisines.add(formatted);
+      }
+    }
+  }
+
+  return Array.from(cuisines);
+}
 
 function extractDietaryTags(
-  categories: Array<{ name?: string; short_name?: string }> | undefined,
+  types: string[] | undefined,
   restaurantName: string
 ): string[] {
   const tags = new Set<string>();
   const searchText = [
     restaurantName,
-    ...(categories ?? []).map((c) => c.name ?? c.short_name ?? ""),
+    ...(types ?? []),
   ]
     .join(" ")
     .toLowerCase();
@@ -300,93 +326,6 @@ function extractDietaryTags(
   }
 
   return Array.from(tags);
-}
-
-function mapFoursquarePlace(raw: unknown, userLocation: Location): Restaurant {
-  const place = raw as Record<string, unknown>;
-
-  const restaurantLocation: Location = {
-    lat: (place.latitude as number) ?? 0,
-    lng: (place.longitude as number) ?? 0,
-  };
-
-  const fsqId = (place.fsq_place_id as string) ?? "";
-  const name = (place.name as string) ?? "Unknown";
-
-  const loc = place.location as Record<string, unknown> | undefined;
-  const address =
-    (loc?.formatted_address as string) ??
-    (loc?.address as string) ??
-    "";
-
-  const priceRaw = place.price as number | undefined;
-  const priceLevel: PriceLevel | null =
-    typeof priceRaw === "number" ? (PRICE_LEVELS[priceRaw] ?? null) : null;
-  const avgPrice = priceLevel ? (AVG_PRICE_MAP[priceLevel] ?? null) : null;
-
-  const ratingRaw = place.rating as number | undefined;
-  const rating =
-    typeof ratingRaw === "number"
-      ? Math.round((ratingRaw / 2) * 10) / 10
-      : null;
-
-  const categories = place.categories as Array<{ name?: string; short_name?: string }> | undefined;
-  const cuisines = Array.isArray(categories)
-    ? [
-        ...new Set(
-          categories
-            .flatMap((c) => [c.short_name ?? "", c.name ?? ""])
-            .map((n) => n.trim())
-            .filter((n) => n !== "" && n.toLowerCase() !== "restaurant")
-        ),
-      ]
-    : [];
-
-  const hours = place.hours as Record<string, unknown> | undefined;
-  const isOpenNow =
-    typeof hours?.open_now === "boolean" ? hours.open_now : null;
-
-  const distMeters = place.distance as number | undefined;
-  const dist =
-    typeof distMeters === "number"
-      ? Math.round((distMeters / 1000) * 10) / 10
-      : restaurantLocation.lat !== 0
-        ? Math.round(distanceKm(userLocation, restaurantLocation) * 10) / 10
-        : null;
-
-  const stats = place.stats as Record<string, number> | undefined;
-  const reviewCount =
-    typeof stats?.total_ratings === "number" ? stats.total_ratings : null;
-
-  const photos = place.photos as Array<{ prefix?: string; suffix?: string }> | undefined;
-  const firstPhoto = photos?.[0];
-  const photoUrl =
-    firstPhoto?.prefix && firstPhoto?.suffix
-      ? `${firstPhoto.prefix}400x400${firstPhoto.suffix}`
-      : null;
-
-  const websiteRaw = place.website;
-  const websiteUrl = typeof websiteRaw === "string" && websiteRaw.length > 0
-    ? websiteRaw
-    : null;
-
-  return {
-    id: fsqId,
-    place_id: fsqId,
-    name,
-    address,
-    location: restaurantLocation,
-    price_level: priceLevel,
-    avg_price_per_person: avgPrice,
-    rating,
-    review_count: reviewCount,
-    cuisines,
-    dietary_tags: extractDietaryTags(categories, name),
-    is_open_now: isOpenNow,
-    distance_km: dist,
-    photo_url: photoUrl,
-    website_url: websiteUrl,
-  };
 }
 
 export { getGooglePlaceDetails as getPlaceDetails } from "./googlePlacesProvider";

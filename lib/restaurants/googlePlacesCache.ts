@@ -4,14 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
 export async function getGoogleDetailsCached(
-  fsqPlaceId: string
+  placeId: string
 ): Promise<PlaceDetails | null> {
   try {
     const supabase = await createClient();
     const { data: cached } = await supabase
       .from("google_place_details_cache")
       .select("data, expires_at")
-      .eq("fsq_place_id", fsqPlaceId)
+      .eq("place_id", placeId)
       .single();
 
     if (cached && new Date(cached.expires_at) > new Date()) {
@@ -25,8 +25,7 @@ export async function getGoogleDetailsCached(
 }
 
 export async function putGoogleDetailsCache(
-  fsqPlaceId: string,
-  googlePlaceId: string,
+  placeId: string,
   details: PlaceDetails
 ): Promise<void> {
   try {
@@ -35,8 +34,8 @@ export async function putGoogleDetailsCache(
 
     await supabase.from("google_place_details_cache").upsert(
       {
-        google_place_id: googlePlaceId,
-        fsq_place_id: fsqPlaceId,
+        google_place_id: placeId,
+        place_id: placeId,
         data: details,
         fetched_at: new Date().toISOString(),
         expires_at: expiresAt,

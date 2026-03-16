@@ -1,6 +1,9 @@
 import type { Restaurant } from "@/types/restaurant";
 import type { RestaurantSearchParams } from "./restaurantProvider";
-import { searchNearbyRestaurants } from "./restaurantProvider";
+import {
+  searchNearbyRestaurants,
+  searchTextRestaurants,
+} from "./restaurantProvider";
 import { createClient } from "@/lib/supabase/server";
 import { encodeGeohash } from "@/lib/utils/geohash";
 
@@ -19,6 +22,7 @@ export async function getRestaurantsWithCache(
   params: RestaurantSearchParams
 ): Promise<Restaurant[]> {
   const cacheKey = buildCacheKey(params);
+  let staleCache: Restaurant[] | null = null;
 
   try {
     const supabase = await createClient();
@@ -28,14 +32,21 @@ export async function getRestaurantsWithCache(
       .eq("cache_key", cacheKey)
       .single();
 
-    if (cached && new Date(cached.expires_at) > new Date()) {
-      return cached.data as Restaurant[];
+    if (cached) {
+      const cachedData = cached.data as Restaurant[];
+      if (new Date(cached.expires_at) > new Date()) {
+        return cachedData;
+      }
+      staleCache = cachedData;
     }
   } catch {
     // cache miss or table doesn't exist yet — fall through to provider
   }
 
-  const results = await searchNearbyRestaurants(params);
+  const hasQuery = !!params.query?.trim();
+  const results = hasQuery
+    ? await searchTextRestaurants(params)
+    : await searchNearbyRestaurants(params);
 
   if (results.length > 0) {
     try {
@@ -55,6 +66,11 @@ export async function getRestaurantsWithCache(
     } catch {
       // cache write failure is non-critical
     }
+    return results;
+  }
+
+  if (staleCache && staleCache.length > 0) {
+    return staleCache;
   }
 
   return results;

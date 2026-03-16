@@ -58,6 +58,7 @@ export const RecommendationAnnotation = Annotation.Root({
   personalization: Annotation<PersonalizationHints | null>,
   radiusKm: Annotation<number>,
 
+  searchSource: Annotation<"nearby" | "text">,
   candidates: Annotation<Restaurant[]>,
   filtered: Annotation<Restaurant[]>,
   scored: Annotation<ScoredRecommendation[]>,

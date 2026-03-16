@@ -2,6 +2,8 @@ import type { Restaurant } from "@/types/restaurant";
 import type { BudgetSlot } from "@/types/budget";
 import type { UserPreferences } from "@/types/profile";
 
+export type SearchSource = "nearby" | "text";
+
 export interface FilterOptions {
   budget: BudgetSlot | null;
   preferences: UserPreferences | null;
@@ -10,26 +12,28 @@ export interface FilterOptions {
   cuisineOverride?: string;
   dietaryOverride?: string;
   priceFloor?: number;
+  searchSource?: SearchSource;
 }
 
 export function filterRestaurants(
   restaurants: Restaurant[],
   options: FilterOptions
 ): Restaurant[] {
+  const fromTextSearch = options.searchSource === "text";
   let result = [...restaurants];
-  console.log(`[filter] start: ${result.length}`);
+  console.log(`[filter] start: ${result.length} (source: ${options.searchSource ?? "unknown"})`);
 
   if (result.length > 0) {
     const sample = result.slice(0, 3).map((r) => ({ name: r.name, cuisines: r.cuisines }));
     console.log("[filter] sample cuisines:", JSON.stringify(sample));
   }
 
-  if (options.requireOpenNow !== false) {
+  if (!fromTextSearch && options.requireOpenNow !== false) {
     result = result.filter((r) => r.is_open_now !== false);
     console.log(`[filter] after open_now: ${result.length}`);
   }
 
-  if (options.cuisineOverride) {
+  if (!fromTextSearch && options.cuisineOverride) {
     const target = options.cuisineOverride.toLowerCase();
     result = result.filter(
       (r) =>

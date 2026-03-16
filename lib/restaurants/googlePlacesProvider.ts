@@ -4,8 +4,6 @@ import { fetchRestaurantInsights } from "@/lib/ai/searchPreview";
 
 const GOOGLE_BASE = "https://places.googleapis.com/v1";
 
-const TEXT_SEARCH_FIELD_MASK = "places.id";
-
 const DETAILS_FIELD_MASK = [
   "displayName",
   "formattedAddress",
@@ -30,64 +28,6 @@ function getApiKey(): string {
   const key = process.env.GOOGLE_PLACES_API_KEY ?? "";
   if (!key) console.warn("GOOGLE_PLACES_API_KEY is not configured");
   return key;
-}
-
-function sanitizeAddress(raw: string): string {
-  return raw.replace(/\s*\([^)]*\)/g, "").trim();
-}
-
-export async function findGooglePlaceId(
-  name: string,
-  address: string
-): Promise<string | null> {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-
-  const cleanAddress = sanitizeAddress(address);
-
-  const res = await fetch(`${GOOGLE_BASE}/places:searchText`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
-    },
-    body: JSON.stringify({
-      textQuery: `${name}, ${cleanAddress}`,
-      includedType: "restaurant",
-      maxResultCount: 1,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    console.error(`Google Text Search error ${res.status}: ${text}`);
-    return null;
-  }
-
-  const data = (await res.json()) as { places?: Array<{ id?: string }> };
-
-  if (data.places?.[0]?.id) {
-    return data.places[0].id;
-  }
-
-  const retryRes = await fetch(`${GOOGLE_BASE}/places:searchText`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": TEXT_SEARCH_FIELD_MASK,
-    },
-    body: JSON.stringify({
-      textQuery: `${name}, ${cleanAddress}`,
-      maxResultCount: 1,
-    }),
-  });
-
-  if (!retryRes.ok) return null;
-
-  const retryData = (await retryRes.json()) as { places?: Array<{ id?: string }> };
-  return retryData.places?.[0]?.id ?? null;
 }
 
 interface GooglePlaceDetailsRaw {
@@ -228,25 +168,22 @@ const EMPTY_DETAILS: PlaceDetails = {
 };
 
 /**
- * Main entry point: resolves a Foursquare place ID to full Google Place Details.
- * Checks Supabase cache first, then calls Google APIs on miss.
+ * Fetches full Google Place Details for a given Google Place ID.
+ * Checks Supabase cache first, then calls Google API on miss.
  */
 export async function getGooglePlaceDetails(
-  fsqPlaceId: string,
+  placeId: string,
   restaurantName?: string,
   restaurantAddress?: string
 ): Promise<PlaceDetails> {
-  const cached = await getGoogleDetailsCached(fsqPlaceId);
+  const cached = await getGoogleDetailsCached(placeId);
   if (cached) return cached;
 
   const name = restaurantName ?? "";
   const address = restaurantAddress ?? "";
 
-  const googleId = await findGooglePlaceId(name, address);
-  if (!googleId) return EMPTY_DETAILS;
-
   const [rawDetails, insights] = await Promise.all([
-    fetchGooglePlaceDetails(googleId),
+    fetchGooglePlaceDetails(placeId),
     fetchRestaurantInsights(name, address).catch(() => null),
   ]);
   if (!rawDetails) return EMPTY_DETAILS;
@@ -256,8 +193,8 @@ export async function getGooglePlaceDetails(
     known_for: insights?.knownFor ?? [],
   };
 
-  await putGoogleDetailsCache(fsqPlaceId, googleId, details).catch((err) =>
-    console.error("[googlePlacesProvider] cache write failed:", err)
+  await putGoogleDetailsCache(placeId, details).catch((e: unknown) =>
+    console.error("[googlePlacesProvider] cache write failed:", e)
   );
 
   return details;

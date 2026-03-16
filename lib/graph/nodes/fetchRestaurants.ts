@@ -14,6 +14,7 @@ export async function fetchRestaurants(
   state: RecommendationState
 ): Promise<Partial<RecommendationState>> {
   const query = buildSearchQuery(state);
+  const searchSource = query ? "text" as const : "nearby" as const;
 
   const candidates = await getRestaurantsWithCache({
     location: state.location,
@@ -22,8 +23,8 @@ export async function fetchRestaurants(
   });
 
   if (candidates.length === 0) {
-    return { candidates, earlyExitReason: "NO_NEARBY_RESTAURANTS" };
+    return { candidates, searchSource, earlyExitReason: "NO_NEARBY_RESTAURANTS" };
   }
 
-  return { candidates };
+  return { candidates, searchSource };
 }

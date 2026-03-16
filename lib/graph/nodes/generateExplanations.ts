@@ -1,6 +1,6 @@
 import type { RecommendationState } from "../state";
 import type { ScoredRecommendation } from "@/types/recommendation";
-import { getOpenAIClient } from "@/lib/ai/client";
+import { getOpenAIMiniClient } from "@/lib/ai/client";
 import {
   ExplanationResponseSchema,
   buildExplanationPrompt,
@@ -8,7 +8,7 @@ import {
 } from "@/lib/chat/explanationPrompt";
 import { withTimeout } from "@/lib/ai/timeout";
 
-const LLM_TIMEOUT_MS = 10_000;
+const LLM_TIMEOUT_MS = 15_000;
 
 export async function generateExplanations(
   state: RecommendationState
@@ -21,7 +21,7 @@ export async function generateExplanations(
   let explanations = generateFallbackExplanations(allResults, state.preferences?.distance_unit);
 
   try {
-    const llm = getOpenAIClient();
+    const llm = getOpenAIMiniClient();
     const prompt = buildExplanationPrompt(
       state.userMessage,
       allResults,

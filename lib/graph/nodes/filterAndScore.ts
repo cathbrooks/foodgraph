@@ -56,6 +56,7 @@ export async function filterAndScore(
     cuisineOverride: constraints.cuisineFilter,
     dietaryOverride: constraints.dietaryFilter,
     priceFloor: constraints.priceFloor,
+    searchSource: state.searchSource,
   });
 
   console.log("[filterAndScore] filtered:", filtered.length);
