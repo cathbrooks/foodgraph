@@ -10,6 +10,11 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // #region agent log
+  console.error('[debug-7bdc60] POST /api/chat auth:', JSON.stringify({hasUser:!!user,userId:user?.id??null,emailConfirmed:user?.email_confirmed_at??null}));
+  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7bdc60'},body:JSON.stringify({sessionId:'7bdc60',location:'api/chat/route.ts:POST:auth',message:'chat POST getUser result',data:{hasUser:!!user,userId:user?.id??null,emailConfirmed:user?.email_confirmed_at??null},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+  // #endregion
+
   if (!user) return jsonError("Unauthorized", 401);
 
   let body: unknown;
@@ -29,14 +34,8 @@ export async function POST(request: Request) {
 
   try {
     const response = await handleChatRequest(user.id, parsed.data);
-    // #region agent log
-    fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'route.ts:success',message:'API returning 200',data:{hasResponse:!!response,responseKeys:response?Object.keys(response):null},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     return NextResponse.json(response);
   } catch (err) {
-    // #region agent log
-    fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'route.ts:catch-500',message:'API returning 500',data:{error:String(err),stack:(err as Error)?.stack},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     console.error("Chat request failed:", err);
     return jsonError(
       "Something went wrong while getting recommendations. Please try again.",

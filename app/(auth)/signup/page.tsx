@@ -33,13 +33,19 @@ export default function SignupPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (error) {
       setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data.session) {
+      setError("Check your email for a confirmation link, then sign in.");
       setLoading(false);
       return;
     }

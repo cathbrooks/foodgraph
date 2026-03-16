@@ -15,10 +15,6 @@ const EXIT_MESSAGES: Record<string, string> = {
 export async function earlyExit(
   state: RecommendationState
 ): Promise<Partial<RecommendationState>> {
-  // #region agent log
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'earlyExit.ts:entry',message:'earlyExit entered',data:{earlyExitReason:state.earlyExitReason,budgetChoice:state.budgetChoice,hasSlot:!!state.slot},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
-
   const reason = state.earlyExitReason ?? "INTERNAL_ERROR";
   const usingBudgetSlot = state.budgetChoice === "slot";
 
@@ -47,10 +43,6 @@ export async function earlyExit(
     recommendation_event_id: null,
     state_updates: undefined,
   };
-
-  // #region agent log
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'e1907f'},body:JSON.stringify({sessionId:'e1907f',location:'earlyExit.ts:exit',message:'earlyExit returning response',data:{hasResponse:!!response,messageContent:message.content?.substring(0,80)},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-  // #endregion
 
   return { response };
 }
