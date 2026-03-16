@@ -18,14 +18,15 @@ export async function generateExplanations(
     ...(state.wildcard ? [state.wildcard] : []),
   ];
 
-  let explanations = generateFallbackExplanations(allResults);
+  let explanations = generateFallbackExplanations(allResults, state.preferences?.distance_unit);
 
   try {
     const llm = getOpenAIClient();
     const prompt = buildExplanationPrompt(
       state.userMessage,
       allResults,
-      state.slot
+      state.slot,
+      state.preferences?.distance_unit
     );
 
     const response = await withTimeout(

@@ -19,6 +19,7 @@ export function Layout4(props: LayoutProps) {
     handleSubmit, handleChipClick, handleFindFood, handleWildcard,
     handleBudgetSelection, handleCardClick, handleCardSelect,
     requestLocation, greeting, onNewChat, welcomeChips, budgetChips,
+    distanceUnit,
   } = props;
 
   const INITIAL_COUNT = 3;
@@ -103,7 +104,7 @@ export function Layout4(props: LayoutProps) {
                 return (
                   <div className="space-y-2">
                     {visible.map((rec: ScoredRecommendation, idx: number) => (
-                      <RestaurantCard key={idx} recommendation={rec} onClick={() => handleCardClick(rec)} onSelect={() => handleCardSelect(rec)} selected={selectedPlaceId === rec.restaurant.place_id} details={placeDetails[rec.restaurant.place_id] ?? null} detailsLoading={detailsLoading === rec.restaurant.place_id} />
+                      <RestaurantCard key={idx} recommendation={rec} onClick={() => handleCardClick(rec)} onSelect={() => handleCardSelect(rec)} selected={selectedPlaceId === rec.restaurant.place_id} details={placeDetails[rec.restaurant.place_id] ?? null} detailsLoading={detailsLoading === rec.restaurant.place_id} distanceUnit={distanceUnit} />
                     ))}
                     {hiddenCount > 0 && !isExpanded && (
                       <button onClick={() => { setExpandedMessages((prev) => { const n = new Set(prev); n.add(msg.id); return n; }); scrollToBottom(); }} className="w-full rounded-lg bg-indigo-50 py-2.5 text-xs font-medium text-indigo-600">Show {hiddenCount} more</button>

@@ -27,15 +27,10 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  try {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  // #region agent log
-  console.log('[DEBUG-0dbf01] PUT /api/profile auth:', JSON.stringify({hasUser:!!user,userId:user?.id??null}));
-  // #endregion
 
   if (!user) return jsonError("Unauthorized", 401);
 
@@ -47,10 +42,6 @@ export async function PUT(request: Request) {
   }
 
   const parsed = UpdatePreferencesSchema.safeParse(body);
-
-  // #region agent log
-  console.log('[DEBUG-0dbf01] PUT /api/profile validation:', JSON.stringify({success:parsed.success,errors:parsed.success?null:parsed.error.issues}));
-  // #endregion
 
   if (!parsed.success) {
     return jsonError(
@@ -71,19 +62,7 @@ export async function PUT(request: Request) {
     .select()
     .single();
 
-  // #region agent log
-  console.log('[DEBUG-0dbf01] PUT /api/profile upsert:', JSON.stringify({hasData:!!data,errorMsg:error?.message??null,errorCode:error?.code??null,errorDetails:error?.details??null}));
-  // #endregion
-
   if (error) return jsonError(error.message, 500);
 
   return NextResponse.json(data);
-  } catch (uncaught: unknown) {
-    // #region agent log
-    const errMsg = uncaught instanceof Error ? uncaught.message : String(uncaught);
-    const errStack = uncaught instanceof Error ? uncaught.stack : undefined;
-    console.error('[DEBUG-0dbf01] PUT /api/profile UNCAUGHT:', JSON.stringify({message:errMsg,stack:errStack}));
-    // #endregion
-    return NextResponse.json({ error: `Internal error: ${errMsg}` }, { status: 500 });
-  }
 }

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveActiveSlot } from "@/lib/budgets/slotResolver";
 import { jsonError } from "@/lib/utils/validation";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -11,7 +11,10 @@ export async function GET() {
 
   if (!user) return jsonError("Unauthorized", 401);
 
-  const slot = await resolveActiveSlot(user.id);
+  const { searchParams } = new URL(request.url);
+  const tz = searchParams.get("tz") ?? undefined;
+
+  const slot = await resolveActiveSlot(user.id, undefined, tz);
 
   return NextResponse.json({ slot });
 }

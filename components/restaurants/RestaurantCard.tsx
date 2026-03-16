@@ -1,8 +1,10 @@
 import type { ScoredRecommendation } from "@/types/recommendation";
 import type { PlaceDetails, PriceLevel } from "@/types/restaurant";
 import type { GoogleReview } from "@/types/restaurant";
+import type { DistanceUnit } from "@/types/profile";
 import { Card, Spinner } from "@/components/ui";
 import { NavigationSection } from "./NavigationSection";
+import { formatDistance } from "@/lib/utils/geo";
 
 interface RestaurantCardProps {
   recommendation: ScoredRecommendation;
@@ -11,6 +13,7 @@ interface RestaurantCardProps {
   details?: PlaceDetails | null;
   detailsLoading?: boolean;
   selected?: boolean;
+  distanceUnit?: DistanceUnit;
 }
 
 const WebsiteIcon = () => (
@@ -246,6 +249,7 @@ export function RestaurantCard({
   details,
   detailsLoading,
   selected,
+  distanceUnit = "km",
 }: RestaurantCardProps) {
   const { restaurant, explanation, is_wildcard } = recommendation;
 
@@ -293,7 +297,7 @@ export function RestaurantCard({
             <span>&#9733; {restaurant.rating}</span>
           )}
           {restaurant.distance_km != null && (
-            <span>{restaurant.distance_km.toFixed(1)} km</span>
+            <span>{formatDistance(restaurant.distance_km, distanceUnit)}</span>
           )}
         </div>
         {explanation && (

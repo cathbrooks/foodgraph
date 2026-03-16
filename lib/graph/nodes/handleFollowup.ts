@@ -8,9 +8,11 @@ import type {
   StateUpdates,
 } from "@/types/chat";
 import type { BudgetSlot } from "@/types/budget";
+import type { DistanceUnit } from "@/types/profile";
 import { getOpenAIClient } from "@/lib/ai/client";
 import { withTimeout } from "@/lib/ai/timeout";
 import { resolveActiveSlot } from "@/lib/budgets/slotResolver";
+import { formatDistance } from "@/lib/utils/geo";
 
 const LLM_TIMEOUT_MS = 8000;
 
@@ -18,7 +20,8 @@ function buildFollowupSystemPrompt(
   session: SessionState | undefined,
   recContext: RecommendationContext[],
   slot: BudgetSlot | null,
-  lookedUpDetails: RestaurantDetails | null
+  lookedUpDetails: RestaurantDetails | null,
+  distanceUnit: DistanceUnit = "km"
 ): string {
   const allRestaurants = session?.restaurants ?? recContext;
 
@@ -29,7 +32,7 @@ function buildFollowupSystemPrompt(
       if (r.cuisine) parts.push(`Cuisine: ${r.cuisine}`);
       if (r.avg_price != null) parts.push(`Avg price: $${r.avg_price}/person`);
       if (r.rating != null) parts.push(`Rating: ${r.rating}/5`);
-      if (r.distance_km != null) parts.push(`Distance: ${r.distance_km} km`);
+      if (r.distance_km != null) parts.push(`Distance: ${formatDistance(r.distance_km, distanceUnit)}`);
       if (r.is_wildcard) parts.push("(wildcard pick)");
       if (r.explanation) parts.push(`Why picked: ${r.explanation}`);
       return `- ${parts.join(" | ")}`;
@@ -96,12 +99,14 @@ Rules:
 export async function handleFollowup(
   state: RecommendationState
 ): Promise<Partial<RecommendationState>> {
-  const slot = await resolveActiveSlot(state.userId).catch(() => null);
+  const slot = await resolveActiveSlot(state.userId, undefined, state.timezone).catch(() => null);
+  const distanceUnit: DistanceUnit = state.preferences?.distance_unit ?? "km";
   const systemPrompt = buildFollowupSystemPrompt(
     state.sessionState,
     state.lastRecommendations,
     slot,
-    state.lookedUpDetails ?? null
+    state.lookedUpDetails ?? null,
+    distanceUnit
   );
 
   const messages: Array<{ role: string; content: string }> = [

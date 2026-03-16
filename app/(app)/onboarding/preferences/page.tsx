@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
 import { PreferencesForm } from "@/components/onboarding/PreferencesForm";
-import type { Cuisine, DietaryRestriction } from "@/types/profile";
+import type { Cuisine, DietaryRestriction, DistanceUnit } from "@/types/profile";
 
 export default function OnboardingPreferencesPage() {
   const router = useRouter();
@@ -14,13 +14,9 @@ export default function OnboardingPreferencesPage() {
     cuisines: Cuisine[];
     dietary_restrictions: DietaryRestriction[];
     travel_radius_km: number;
+    distance_unit: DistanceUnit;
   }) {
     setLoading(true);
-
-    // #region agent log
-    console.log('[DEBUG-0dbf01] about to PUT /api/profile, payload:', JSON.stringify(data));
-    fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0dbf01'},body:JSON.stringify({sessionId:'0dbf01',location:'onboarding/preferences/page.tsx:beforePUT',message:'about to PUT /api/profile',data:{payload:data},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
 
     const res = await fetch("/api/profile", {
       method: "PUT",
@@ -28,14 +24,9 @@ export default function OnboardingPreferencesPage() {
       body: JSON.stringify(data),
     });
 
-    // #region agent log
-    const resBody = await res.json().catch(() => null);
-    console.log('[DEBUG-0dbf01] PUT /api/profile response:', JSON.stringify({status:res.status,ok:res.ok,body:resBody}));
-    fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0dbf01'},body:JSON.stringify({sessionId:'0dbf01',location:'onboarding/preferences/page.tsx:afterPUT',message:'PUT /api/profile response',data:{status:res.status,ok:res.ok,body:resBody},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-
     if (!res.ok) {
-      throw new Error(resBody?.error ?? "Failed to save preferences");
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.error ?? "Failed to save preferences");
     }
 
     router.push("/onboarding/budget-slots");

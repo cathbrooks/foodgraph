@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { ScoredRecommendation } from "@/types/recommendation";
 import type { BudgetSlot } from "@/types/budget";
+import type { DistanceUnit } from "@/types/profile";
+import { formatDistance } from "@/lib/utils/geo";
 
 export const ExplanationResponseSchema = z.object({
   explanations: z.array(
@@ -16,15 +18,17 @@ export type ExplanationResponse = z.infer<typeof ExplanationResponseSchema>;
 export function buildExplanationPrompt(
   userMessage: string,
   recommendations: ScoredRecommendation[],
-  slot: BudgetSlot | null
+  slot: BudgetSlot | null,
+  distanceUnit: DistanceUnit = "km"
 ): string {
   const recSummaries = recommendations
     .map((r, i) => {
       const s = r.restaurant;
       const score = r.score;
+      const distLabel = s.distance_km != null ? formatDistance(s.distance_km, distanceUnit) : "?";
       return [
         `${i + 1}. ${s.name} (place_id: ${s.place_id})`,
-        `   Price: ${s.price_level ?? "unknown"} | Rating: ${s.rating ?? "?"}/5 | Distance: ${s.distance_km ?? "?"}km`,
+        `   Price: ${s.price_level ?? "unknown"} | Rating: ${s.rating ?? "?"}/5 | Distance: ${distLabel}`,
         `   Cuisines: ${s.cuisines.join(", ") || "unknown"}`,
         `   Scores: budget=${score.budget_fit}, cuisine=${score.cuisine_match}, distance=${score.distance}, rating=${score.rating}`,
         r.is_wildcard ? "   [WILDCARD pick]" : "",
@@ -57,7 +61,8 @@ Respond ONLY with valid JSON matching this schema:
 }
 
 export function generateFallbackExplanations(
-  recommendations: ScoredRecommendation[]
+  recommendations: ScoredRecommendation[],
+  distanceUnit: DistanceUnit = "km"
 ): ExplanationResponse {
   return {
     explanations: recommendations.map((r) => {
@@ -77,7 +82,8 @@ export function generateFallbackExplanations(
       if (s.rating != null && s.rating >= 4.0) {
         parts.push(`highly rated (${s.rating}/5)`);
       }
-      if (s.distance_km != null && s.distance_km <= 1) {
+      const closeThreshold = distanceUnit === "mi" ? 0.62 : 1;
+      if (s.distance_km != null && s.distance_km <= closeThreshold) {
         parts.push("very close by");
       }
 

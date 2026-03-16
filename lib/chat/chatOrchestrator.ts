@@ -19,6 +19,7 @@ export async function handleChatRequest(
     chatHistory: request.history ?? [],
     lastRecommendations: request.last_recommendations ?? [],
     sessionState,
+    timezone: request.timezone,
     intent: null,
     slot: null,
     preferences: null,

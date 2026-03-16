@@ -104,6 +104,7 @@ export const ChatRequestSchema = z.object({
   history: z.array(ChatHistoryEntrySchema).max(6).default([]),
   last_recommendations: z.array(RecommendationContextSchema).max(10).default([]),
   session_state: SessionStateSchema.optional(),
+  timezone: z.string().optional(),
 });
 
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;

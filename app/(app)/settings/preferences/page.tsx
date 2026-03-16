@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { PreferencesForm } from "@/components/onboarding/PreferencesForm";
 import { Spinner } from "@/components/ui/Spinner";
 import { toast } from "@/components/ui/Toast";
-import type { Cuisine, DietaryRestriction } from "@/types/profile";
+import type { Cuisine, DietaryRestriction, DistanceUnit } from "@/types/profile";
 
 interface PreferencesData {
   cuisines: Cuisine[];
   dietary_restrictions: DietaryRestriction[];
   travel_radius_km: number;
+  distance_unit: DistanceUnit;
 }
 
 export default function SettingsPreferencesPage() {
@@ -26,6 +27,7 @@ export default function SettingsPreferencesPage() {
             cuisines: data.preferences.cuisines ?? [],
             dietary_restrictions: data.preferences.dietary_restrictions ?? [],
             travel_radius_km: data.preferences.travel_radius_km ?? 5,
+            distance_unit: data.preferences.distance_unit ?? "km",
           });
         }
       })
@@ -36,6 +38,7 @@ export default function SettingsPreferencesPage() {
     cuisines: Cuisine[];
     dietary_restrictions: DietaryRestriction[];
     travel_radius_km: number;
+    distance_unit: DistanceUnit;
   }) {
     setSaving(true);
 
@@ -73,6 +76,7 @@ export default function SettingsPreferencesPage() {
         initialCuisines={prefs?.cuisines}
         initialDietary={prefs?.dietary_restrictions}
         initialRadius={prefs?.travel_radius_km}
+        initialDistanceUnit={prefs?.distance_unit}
         onSubmit={handleSubmit}
         submitLabel="Save changes"
         loading={saving}

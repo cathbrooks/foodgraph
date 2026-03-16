@@ -46,6 +46,7 @@ export const RecommendationAnnotation = Annotation.Root({
 
   budgetChoice: Annotation<BudgetChoice>,
   customBudgetCeiling: Annotation<number | null>,
+  timezone: Annotation<string | undefined>,
 
   chatHistory: Annotation<Array<{ role: string; content: string }>>,
   lastRecommendations: Annotation<RecommendationContext[]>,

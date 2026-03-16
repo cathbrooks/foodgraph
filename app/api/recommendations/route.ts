@@ -15,6 +15,7 @@ import { z } from "zod";
 const RecommendRequestSchema = z.object({
   location: LocationSchema,
   include_wildcard: z.boolean().default(false),
+  timezone: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -40,11 +41,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { location, include_wildcard } = parsed.data;
+  const { location, include_wildcard, timezone } = parsed.data;
 
   try {
     const [slot, prefsResult, hints] = await Promise.all([
-      resolveActiveSlot(user.id),
+      resolveActiveSlot(user.id, undefined, timezone),
       supabase
         .from("user_preferences")
         .select("*")
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     }
 
     const all = wildcard ? [wildcard] : scored;
-    const explanations = generateFallbackExplanations(all);
+    const explanations = generateFallbackExplanations(all, preferences?.distance_unit);
     scored = all.map((rec) => {
       const match = explanations.explanations.find(
         (e) => e.place_id === rec.restaurant.place_id

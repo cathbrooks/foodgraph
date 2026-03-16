@@ -8,6 +8,7 @@ import { useChatStore } from "@/lib/stores/chatStore";
 import type { ChatMessage, BudgetChoice, RecommendationContext, RestaurantDetails } from "@/types/chat";
 import type { ScoredRecommendation } from "@/types/recommendation";
 import type { PlaceDetails } from "@/types/restaurant";
+import type { DistanceUnit } from "@/types/profile";
 import type { LayoutProps } from "@/components/layouts/types";
 import { Layout4 } from "@/components/layouts";
 
@@ -76,6 +77,7 @@ export default function ChatPage() {
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingBudgetConfirmation | null>(null);
   const [showBudgetChips, setShowBudgetChips] = useState(false);
   const [budgetPromptLoading, setBudgetPromptLoading] = useState(false);
+  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>("km");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +129,17 @@ export default function ChatPage() {
       .catch(() => {});
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.preferences?.distance_unit) {
+          setDistanceUnit(data.preferences.distance_unit);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const scrollToBottom = useCallback(() => {
@@ -201,6 +214,7 @@ export default function ChatPage() {
           history: buildHistory(),
           last_recommendations: lastRecommendations,
           session_state: sessionState,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 
@@ -297,6 +311,7 @@ export default function ChatPage() {
           history: buildHistory(),
           last_recommendations: lastRecommendations,
           session_state: sessionState,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 
@@ -538,6 +553,7 @@ export default function ChatPage() {
       ...DYNAMIC_CHIP_TEMPLATES.map((tpl, i) => ({ ...tpl, label: dynamicLabels[i] })),
     ],
     budgetChips: BUDGET_CHIPS,
+    distanceUnit,
   };
 
   return (

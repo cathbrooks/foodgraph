@@ -43,12 +43,17 @@ export const ProfileSchema = z.object({
 
 export type Profile = z.infer<typeof ProfileSchema>;
 
+export const DistanceUnitSchema = z.enum(["km", "mi"]);
+
+export type DistanceUnit = z.infer<typeof DistanceUnitSchema>;
+
 export const UserPreferencesSchema = z.object({
   id: z.string().uuid(),
   user_id: z.string().uuid(),
   cuisines: z.array(CuisineSchema),
   dietary_restrictions: z.array(DietaryRestrictionSchema),
   travel_radius_km: z.number().min(0.5).max(50).default(5),
+  distance_unit: DistanceUnitSchema.default("km"),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -59,6 +64,7 @@ export const UpdatePreferencesSchema = z.object({
   cuisines: z.array(CuisineSchema).optional(),
   dietary_restrictions: z.array(DietaryRestrictionSchema).optional(),
   travel_radius_km: z.number().min(0.5).max(50).optional(),
+  distance_unit: DistanceUnitSchema.optional(),
 });
 
 export type UpdatePreferencesInput = z.infer<typeof UpdatePreferencesSchema>;

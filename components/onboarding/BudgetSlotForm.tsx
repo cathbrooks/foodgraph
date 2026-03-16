@@ -155,8 +155,8 @@ export function BudgetSlotForm({
   const [days, setDays] = useState<DayOfWeek[]>(initial?.days ?? []);
   const [startTime, setStartTime] = useState(initial?.start_time ?? "");
   const [endTime, setEndTime] = useState(initial?.end_time ?? "");
-  const [minBudget, setMinBudget] = useState(initial?.min_budget ?? 0);
-  const [maxBudget, setMaxBudget] = useState(initial?.max_budget ?? 0);
+  const [minBudgetStr, setMinBudgetStr] = useState(String(initial?.min_budget ?? 0));
+  const [maxBudgetStr, setMaxBudgetStr] = useState(String(initial?.max_budget ?? 0));
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -183,6 +183,9 @@ export function BudgetSlotForm({
       setError("Start time must be before end time.");
       return;
     }
+    const minBudget = parseFloat(minBudgetStr) || 0;
+    const maxBudget = parseFloat(maxBudgetStr) || 0;
+
     if (maxBudget < minBudget) {
       setError("Max budget must be at least the min budget.");
       return;
@@ -246,8 +249,12 @@ export function BudgetSlotForm({
           type="number"
           min={0}
           step={1}
-          value={minBudget}
-          onChange={(e) => setMinBudget(parseFloat(e.target.value) || 0)}
+          value={minBudgetStr}
+          onChange={(e) => setMinBudgetStr(e.target.value)}
+          onBlur={() => {
+            const n = parseFloat(minBudgetStr);
+            if (isNaN(n) || n < 0) setMinBudgetStr("0");
+          }}
           required
         />
         <Input
@@ -256,8 +263,12 @@ export function BudgetSlotForm({
           type="number"
           min={0}
           step={1}
-          value={maxBudget}
-          onChange={(e) => setMaxBudget(parseFloat(e.target.value) || 0)}
+          value={maxBudgetStr}
+          onChange={(e) => setMaxBudgetStr(e.target.value)}
+          onBlur={() => {
+            const n = parseFloat(maxBudgetStr);
+            if (isNaN(n) || n < 0) setMaxBudgetStr("0");
+          }}
           required
         />
       </div>

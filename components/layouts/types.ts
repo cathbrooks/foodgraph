@@ -1,6 +1,7 @@
 import type { ChatMessage, BudgetChoice, RecommendationContext } from "@/types/chat";
 import type { ScoredRecommendation } from "@/types/recommendation";
 import type { PlaceDetails } from "@/types/restaurant";
+import type { DistanceUnit } from "@/types/profile";
 
 export interface LayoutProps {
   messages: ChatMessage[];
@@ -40,4 +41,5 @@ export interface LayoutProps {
   onNewChat: () => void;
   welcomeChips: ReadonlyArray<{ label: string; budgetChoice: BudgetChoice | null; skipConfirmation: boolean }>;
   budgetChips: ReadonlyArray<{ label: string; value: number }>;
+  distanceUnit: DistanceUnit;
 }
