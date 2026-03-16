@@ -27,13 +27,13 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  try {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   // #region agent log
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0dbf01'},body:JSON.stringify({sessionId:'0dbf01',location:'api/profile/route.ts:PUT:auth',message:'getUser result in PUT',data:{hasUser:!!user,userId:user?.id??null},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
   console.log('[DEBUG-0dbf01] PUT /api/profile auth:', JSON.stringify({hasUser:!!user,userId:user?.id??null}));
   // #endregion
 
@@ -49,7 +49,6 @@ export async function PUT(request: Request) {
   const parsed = UpdatePreferencesSchema.safeParse(body);
 
   // #region agent log
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0dbf01'},body:JSON.stringify({sessionId:'0dbf01',location:'api/profile/route.ts:PUT:validation',message:'schema parse result',data:{success:parsed.success,errors:parsed.success?null:parsed.error.issues},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
   console.log('[DEBUG-0dbf01] PUT /api/profile validation:', JSON.stringify({success:parsed.success,errors:parsed.success?null:parsed.error.issues}));
   // #endregion
 
@@ -73,11 +72,18 @@ export async function PUT(request: Request) {
     .single();
 
   // #region agent log
-  fetch('http://127.0.0.1:7918/ingest/c3a3bfcf-a94d-45d2-a9fc-846a986bdef8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0dbf01'},body:JSON.stringify({sessionId:'0dbf01',location:'api/profile/route.ts:PUT:upsert',message:'upsert result',data:{hasData:!!data,errorMsg:error?.message??null,errorCode:error?.code??null,errorDetails:error?.details??null},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
   console.log('[DEBUG-0dbf01] PUT /api/profile upsert:', JSON.stringify({hasData:!!data,errorMsg:error?.message??null,errorCode:error?.code??null,errorDetails:error?.details??null}));
   // #endregion
 
   if (error) return jsonError(error.message, 500);
 
   return NextResponse.json(data);
+  } catch (uncaught: unknown) {
+    // #region agent log
+    const errMsg = uncaught instanceof Error ? uncaught.message : String(uncaught);
+    const errStack = uncaught instanceof Error ? uncaught.stack : undefined;
+    console.error('[DEBUG-0dbf01] PUT /api/profile UNCAUGHT:', JSON.stringify({message:errMsg,stack:errStack}));
+    // #endregion
+    return NextResponse.json({ error: `Internal error: ${errMsg}` }, { status: 500 });
+  }
 }
