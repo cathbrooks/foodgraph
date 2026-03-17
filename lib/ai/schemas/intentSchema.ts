@@ -7,6 +7,7 @@ export const IntentTypeSchema = z.enum([
   "general",
   "feedback",
   "followup",
+  "change_budget",
   "unknown",
 ]);
 

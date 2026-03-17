@@ -72,14 +72,16 @@ export async function POST(request: Request) {
 
     const intentParsed = IntentSchema.safeParse(normalized);
     if (!intentParsed.success) {
-      return NextResponse.json({ type: "recommend", targetRestaurant: null });
+      return NextResponse.json({ type: "recommend", targetRestaurant: null, priceCeiling: null, priceFloor: null });
     }
 
     return NextResponse.json({
       type: intentParsed.data.type,
       targetRestaurant: intentParsed.data.constraints.targetRestaurant ?? null,
+      priceCeiling: intentParsed.data.constraints.priceCeiling ?? null,
+      priceFloor: intentParsed.data.constraints.priceFloor ?? null,
     });
   } catch {
-    return NextResponse.json({ type: "recommend", targetRestaurant: null });
+    return NextResponse.json({ type: "recommend", targetRestaurant: null, priceCeiling: null, priceFloor: null });
   }
 }

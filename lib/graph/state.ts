@@ -19,6 +19,7 @@ export type IntentType =
   | "general"
   | "feedback"
   | "followup"
+  | "change_budget"
   | "unknown";
 
 export interface IntentConstraints {

@@ -336,7 +336,7 @@ export default function ChatPage() {
     }
   }
 
-  async function classifyIntent(text: string): Promise<string> {
+  async function classifyIntent(text: string): Promise<{ type: string; priceCeiling: number | null; priceFloor: number | null }> {
     try {
       const restaurantNames = sessionState.restaurants.map((r) => r.restaurant_name);
       const res = await fetch("/api/chat/classify", {
@@ -348,11 +348,15 @@ export default function ChatPage() {
           restaurant_names: restaurantNames,
         }),
       });
-      if (!res.ok) return "recommend";
+      if (!res.ok) return { type: "recommend", priceCeiling: null, priceFloor: null };
       const data = await res.json();
-      return data.type ?? "recommend";
+      return {
+        type: data.type ?? "recommend",
+        priceCeiling: data.priceCeiling ?? null,
+        priceFloor: data.priceFloor ?? null,
+      };
     } catch {
-      return "recommend";
+      return { type: "recommend", priceCeiling: null, priceFloor: null };
     }
   }
 
@@ -384,10 +388,19 @@ export default function ChatPage() {
     }
 
     setBudgetPromptLoading(true);
-    const intentType = await classifyIntent(text.trim());
+    const classified = await classifyIntent(text.trim());
     setBudgetPromptLoading(false);
 
-    if (intentType === "recommend" || intentType === "refine") {
+    if (classified.type === "change_budget") {
+      addUserMessage(text.trim());
+      if (classified.priceCeiling != null) {
+        setConfirmedBudget({ choice: "custom", customCeiling: classified.priceCeiling });
+        await fetchRecommendations(text.trim(), "custom", classified.priceCeiling);
+      } else {
+        setConfirmedBudget({ choice: "none", customCeiling: null });
+        await fetchRecommendations(text.trim(), "none");
+      }
+    } else if (classified.type === "recommend" || classified.type === "refine") {
       if (confirmedBudget) {
         addUserMessage(text.trim());
         await fetchRecommendations(

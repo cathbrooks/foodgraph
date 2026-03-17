@@ -9,6 +9,7 @@ export function afterInterpretIntent(
     case "ask_detail":
       return "lookupRestaurantDetails";
     case "refine":
+    case "change_budget":
       return "resolveContext";
     case "followup":
     case "feedback":

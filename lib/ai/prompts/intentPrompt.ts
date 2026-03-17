@@ -14,6 +14,7 @@ Intent types (pick exactly one):
 - "ask_detail": The user is asking about a SPECIFIC restaurant — hours, menu, atmosphere, reviews, or wants to know more (e.g. "tell me more about Mama Sushi", "what are the hours at Sushi Yoshi?", "do they have outdoor seating?"). Set targetRestaurant to the restaurant name if identifiable.
 - "feedback": The user is reacting to results without asking a question (e.g. "these look great", "none of these work", "I don't like any of them").
 - "general": A general food or restaurant question not about a specific listed restaurant (e.g. "what's a good tip percentage?", "how do I know if a place is good?").
+- "change_budget": The user wants to change, remove, or override their budget constraint mid-conversation. Use this when the user explicitly signals a budget change — e.g. "I don't care about the budget", "forget the budget", "fuck the budget", "budget doesn't matter", "I don't want to spend more than $40", "keep it under $20", "I want something cheap", "I'm feeling fancy", "I want upscale". Extract priceCeiling or priceFloor as appropriate. If the user is removing the budget entirely, both should be null.
 - "unknown": The message is completely unrelated to food or restaurants.
 
 Rules:
@@ -29,7 +30,7 @@ Rules:
 
 Respond with valid JSON using exactly this structure:
 {
-  "type": "recommend" | "refine" | "ask_detail" | "feedback" | "general" | "unknown",
+  "type": "recommend" | "refine" | "ask_detail" | "feedback" | "general" | "change_budget" | "unknown",
   "constraints": {
     "cuisineFilter": string or null,
     "priceCeiling": number or null,
@@ -64,6 +65,21 @@ Example for "coffee shops":
 
 Example for "I'm feeling fancy":
 {"type":"recommend","constraints":{"cuisineFilter":null,"priceCeiling":null,"priceFloor":40,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":"upscale restaurants"}}
+
+Example for "I don't care about the budget" (after a budget was already set):
+{"type":"change_budget","constraints":{"cuisineFilter":null,"priceCeiling":null,"priceFloor":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
+
+Example for "fuck the budget" or "forget the budget":
+{"type":"change_budget","constraints":{"cuisineFilter":null,"priceCeiling":null,"priceFloor":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
+
+Example for "I don't want to spend more than $40":
+{"type":"change_budget","constraints":{"cuisineFilter":null,"priceCeiling":40,"priceFloor":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
+
+Example for "keep it cheap" or "I want something cheap" (after a budget was set):
+{"type":"change_budget","constraints":{"cuisineFilter":null,"priceCeiling":15,"priceFloor":null,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
+
+Example for "I want an upscale restaurant" (after a budget was set):
+{"type":"change_budget","constraints":{"cuisineFilter":null,"priceCeiling":null,"priceFloor":40,"requestedWildcard":false,"dietaryFilter":null,"targetRestaurant":null,"searchQuery":null}}
 
 Do not include any other text.`;
 }
