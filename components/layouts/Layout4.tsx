@@ -24,7 +24,7 @@ export function Layout4(props: LayoutProps) {
   const INITIAL_COUNT = 3;
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col flex-1 min-h-0 bg-white">
       {/* Action bar */}
       <div className="flex items-center justify-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
         <button
