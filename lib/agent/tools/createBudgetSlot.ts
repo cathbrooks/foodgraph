@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { AgentTool } from "@/lib/agent/runner";
 import { createClient } from "@/lib/supabase/server";
 
-const VALID_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const VALID_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 const definition: Anthropic.Tool = {
   name: "create_budget_slot",
@@ -17,7 +17,7 @@ const definition: Anthropic.Tool = {
       },
       days: {
         type: "array",
-        description: `Days this slot applies to. Valid values: ${VALID_DAYS.join(", ")}`,
+        description: `Days this slot applies to (case-insensitive). Valid values: ${VALID_DAYS.join(", ")}`,
         items: { type: "string" },
       },
       start_time: {
@@ -46,7 +46,9 @@ export function buildCreateBudgetSlotTool(userId: string): AgentTool {
     definition,
     handler: async (input) => {
       const label = input.label as string;
-      const days = (input.days as string[]).filter((d) => VALID_DAYS.includes(d));
+      const days = (input.days as string[])
+        .map((d) => d.toLowerCase())
+        .filter((d) => VALID_DAYS.includes(d));
       const start_time = input.start_time as string;
       const end_time = input.end_time as string;
       const min_budget = input.min_budget as number;
