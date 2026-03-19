@@ -102,7 +102,6 @@ export const ChatRequestSchema = z.object({
   budget_choice: BudgetChoiceSchema.default("slot"),
   custom_budget_ceiling: z.number().min(1).nullable().default(null),
   history: z.array(ChatHistoryEntrySchema).max(6).default([]),
-  last_recommendations: z.array(RecommendationContextSchema).max(10).default([]),
   session_state: SessionStateSchema.optional(),
   timezone: z.string().optional(),
 });

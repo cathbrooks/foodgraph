@@ -11,7 +11,7 @@ export async function resolveActiveSlot(
   const time = getCurrentTime(now, tz);
 
   const supabase = await createClient();
-  const { data: slots, error: slotsError } = await supabase
+  const { data: slots } = await supabase
     .from("budget_slots")
     .select("*")
     .eq("user_id", userId)

@@ -10,15 +10,14 @@ import type { LayoutProps } from "./types";
 
 export function Layout4(props: LayoutProps) {
   const {
-    messages, input, setInput, loading, budgetPromptLoading,
+    messages, input, setInput, loading,
     locationReady, locationPending, locationFailed, locError, hasStarted,
-    pendingConfirmation, showBudgetChips, setShowBudgetChips,
     selectedPlaceId, placeDetails, detailsLoading,
     expandedMessages, setExpandedMessages,
     scrollRef, inputRef, scrollToBottom,
     handleSubmit, handleChipClick, handleFindFood, handleWildcard,
-    handleBudgetSelection, handleCardClick, handleCardSelect,
-    requestLocation, greeting, onNewChat, welcomeChips, budgetChips,
+    handleCardClick, handleCardSelect,
+    requestLocation, greeting, onNewChat, welcomeChips,
     distanceUnit,
   } = props;
 
@@ -115,46 +114,35 @@ export function Layout4(props: LayoutProps) {
             </div>
           ))}
 
-          {pendingConfirmation && !loading && (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => handleBudgetSelection("slot")} className="rounded-full bg-indigo-50 border border-indigo-100 px-3.5 py-2 text-xs font-medium text-indigo-700">My budget</button>
-                <button onClick={() => setShowBudgetChips(!showBudgetChips)} className={`rounded-full border px-3.5 py-2 text-xs font-medium ${showBudgetChips ? "bg-indigo-500 text-white border-indigo-500" : "bg-indigo-50 border-indigo-100 text-indigo-700"}`}>Custom</button>
-                <button onClick={() => handleBudgetSelection("none")} className="rounded-full bg-indigo-50 border border-indigo-100 px-3.5 py-2 text-xs font-medium text-indigo-700">Skip budget</button>
-              </div>
-              {showBudgetChips && (
-                <div className="flex flex-wrap gap-2">
-                  {budgetChips.map((c) => (<button key={c.value} onClick={() => handleBudgetSelection("custom", c.value)} className="rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-2 text-xs font-medium text-emerald-700">{c.label}</button>))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {budgetPromptLoading && <ChatBubble role="assistant"><div className="flex items-center gap-2"><Spinner size="sm" /><span className="text-sm">Thinking&hellip;</span></div></ChatBubble>}
           {loading && (
             <div className="space-y-2">
-              <ChatBubble role="assistant"><div className="flex items-center gap-2"><Spinner size="sm" /><span className="text-sm">Finding spots&hellip;</span></div></ChatBubble>
+              <ChatBubble role="assistant">
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <span className="text-sm">Finding spots&hellip;</span>
+                </div>
+              </ChatBubble>
               <RestaurantCardSkeleton /><RestaurantCardSkeleton />
             </div>
           )}
         </div>
       </div>
 
-      {/* Input at bottom */}
+      {/* Input */}
       <div className="border-t border-gray-100 bg-white px-4 py-2.5 safe-area-bottom">
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-lg mx-auto items-center">
           <div className="flex-1 relative">
             <input
               ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)}
-              placeholder={pendingConfirmation && showBudgetChips ? "Budget..." : locationReady ? "Ask me anything about food..." : "Enable location"}
-              disabled={loading || budgetPromptLoading || !locationReady}
+              placeholder={locationReady ? "Ask me anything about food..." : "Enable location"}
+              disabled={loading || !locationReady}
               className="w-full rounded-full bg-gray-100 pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
             />
-            <button type="submit" disabled={loading || budgetPromptLoading || !input.trim() || !locationReady} className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-indigo-500 text-white rounded-full w-7 h-7 flex items-center justify-center disabled:opacity-30">
+            <button type="submit" disabled={loading || !input.trim() || !locationReady} className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-indigo-500 text-white rounded-full w-7 h-7 flex items-center justify-center disabled:opacity-30">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" /></svg>
             </button>
           </div>
-          {hasStarted && !pendingConfirmation && (
+          {hasStarted && (
             <button type="button" onClick={handleWildcard} disabled={loading || !locationReady} className="shrink-0 text-lg disabled:opacity-40" title="Wildcard">🎲</button>
           )}
         </form>

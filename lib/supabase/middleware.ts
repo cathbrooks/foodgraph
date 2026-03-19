@@ -3,6 +3,7 @@ import type { CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup"];
+const ONBOARDING_COOKIE = "fg_onboarded";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -36,6 +37,7 @@ export async function updateSession(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
     const isApiRoute = pathname.startsWith("/api/");
+    const isOnboardingRoute = pathname.startsWith("/onboarding");
 
     if (!user && !isPublicRoute && !isApiRoute) {
       const loginUrl = request.nextUrl.clone();
@@ -48,6 +50,35 @@ export async function updateSession(request: NextRequest) {
       const chatUrl = request.nextUrl.clone();
       chatUrl.pathname = "/chat";
       return NextResponse.redirect(chatUrl);
+    }
+
+    // Onboarding gate: redirect unboarded users to /onboarding/chat.
+    // Skip for public/API/onboarding routes and when the cookie confirms completion.
+    if (user && !isPublicRoute && !isApiRoute && !isOnboardingRoute) {
+      const cachedOnboarded = request.cookies.get(ONBOARDING_COOKIE)?.value === "1";
+
+      if (!cachedOnboarded) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profile && !profile.onboarding_completed) {
+          const onboardingUrl = request.nextUrl.clone();
+          onboardingUrl.pathname = "/onboarding/chat";
+          return NextResponse.redirect(onboardingUrl);
+        }
+
+        // Onboarding is done — set the cookie so we skip this check next time
+        if (profile?.onboarding_completed) {
+          supabaseResponse.cookies.set(ONBOARDING_COOKIE, "1", {
+            path: "/",
+            maxAge: 60 * 60 * 24 * 365,
+            sameSite: "lax",
+          });
+        }
+      }
     }
 
     return supabaseResponse;

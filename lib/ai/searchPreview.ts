@@ -1,5 +1,5 @@
-import OpenAI from "openai";
-import { getServerEnv } from "@/lib/env";
+import type Anthropic from "@anthropic-ai/sdk";
+import { getAnthropicClient } from "@/lib/ai/anthropicClient";
 
 export interface RestaurantInsights {
   summary: string;
@@ -10,85 +10,93 @@ export interface RestaurantInsights {
   reviews: string | null;
 }
 
-let _openai: OpenAI | null = null;
+const MODEL = "claude-sonnet-4-6";
+const MAX_TOKENS = 512;
+const MAX_TURNS = 6;
 
-function getClient(): OpenAI {
-  if (!_openai) {
-    _openai = new OpenAI({ apiKey: getServerEnv().OPENAI_API_KEY });
-  }
-  return _openai;
-}
-
-function buildPrompt(name: string, address: string, websiteUrl?: string): string {
-  const websiteLine = websiteUrl ? `\nTheir website is: ${websiteUrl}` : "";
-  return `You are a helpful restaurant concierge. Research the restaurant "${name}" located at "${address}".${websiteLine}
-
-Provide a concise, useful summary for someone deciding whether to eat there RIGHT NOW. Return ONLY valid JSON with this exact shape (no markdown fencing):
-
-{
-  "summary": "2-3 sentence overview of the restaurant — what it is, why people love it",
-  "knownFor": ["dish or trait 1", "dish or trait 2", "dish or trait 3"],
-  "atmosphere": "One sentence about the vibe, decor, noise level, or seating",
-  "hours": "Today's hours if you can find them, otherwise general hours",
-  "specials": "Any current happy hours, deals, or specials — or null if none found",
-  "reviews": "A brief 1-2 sentence synthesis of what reviewers say"
-}
-
-Rules:
-- Be specific and factual. Only include information you actually find.
-- If you cannot find info for a field, set it to null (for strings) or [] (for arrays).
-- Keep everything concise — this displays on a small card.
-- Do NOT wrap the JSON in markdown code fences.`;
-}
-
-const TIMEOUT_MS = 10_000;
+// web_search_20250305 is a server-side Anthropic tool.
+// Cast needed as the SDK type union may not yet include this tool variant.
+const WEB_SEARCH_TOOL = {
+  type: "web_search_20250305",
+  name: "web_search",
+} as unknown as Anthropic.Tool;
 
 export async function fetchRestaurantInsights(
   name: string,
-  address: string,
-  websiteUrl?: string
+  address: string
 ): Promise<RestaurantInsights | null> {
-  const client = getClient();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  if (!name || !address) return null;
+
+  const client = getAnthropicClient();
+
+  const prompt = `Search for the restaurant "${name}" at ${address}.
+
+What is it most known for? Reply with ONLY a JSON object — no markdown, no explanation:
+{"known_for": ["phrase 1", "phrase 2", "phrase 3"]}
+
+Each phrase should be 2–5 words (e.g., "wood-fired Neapolitan pizza", "lively rooftop bar", "great happy hour deals"). Aim for 3–5 phrases. If you cannot find information about this specific restaurant, return {"known_for": []}.`;
+
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: prompt }];
 
   try {
-    const response = await client.chat.completions.create(
-      {
-        model: "gpt-4o-search-preview",
-        messages: [{ role: "user", content: buildPrompt(name, address, websiteUrl) }],
-      },
-      { signal: controller.signal }
-    );
+    let response = await client.messages.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      tools: [WEB_SEARCH_TOOL],
+      messages,
+    });
 
-    const text = response.choices?.[0]?.message?.content?.trim();
-    if (!text) return null;
+    // Tool use loop — handles the case where web_search stop_reason requires continuation.
+    // For server-side tools, Anthropic injects results; we pass empty content to continue.
+    let turns = 0;
+    while (response.stop_reason === "tool_use" && turns < MAX_TURNS) {
+      turns++;
+      messages.push({ role: "assistant", content: response.content });
 
-    const cleaned = text
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
+      const toolResults: Anthropic.ToolResultBlockParam[] = response.content
+        .filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")
+        .map((b) => ({
+          type: "tool_result" as const,
+          tool_use_id: b.id,
+          content: "",
+        }));
+
+      messages.push({ role: "user", content: toolResults });
+
+      response = await client.messages.create({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        tools: [WEB_SEARCH_TOOL],
+        messages,
+      });
+    }
+
+    const text = response.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("")
       .trim();
 
-    const parsed = JSON.parse(cleaned);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]) as { known_for?: unknown };
+    const knownFor = Array.isArray(parsed.known_for)
+      ? (parsed.known_for as unknown[])
+          .filter((v): v is string => typeof v === "string")
+          .slice(0, 5)
+      : [];
 
     return {
-      summary: typeof parsed.summary === "string" ? parsed.summary : "",
-      knownFor: Array.isArray(parsed.knownFor)
-        ? parsed.knownFor.filter((s: unknown) => typeof s === "string")
-        : [],
-      atmosphere: typeof parsed.atmosphere === "string" ? parsed.atmosphere : null,
-      hours: typeof parsed.hours === "string" ? parsed.hours : null,
-      specials: typeof parsed.specials === "string" ? parsed.specials : null,
-      reviews: typeof parsed.reviews === "string" ? parsed.reviews : null,
+      summary: "",
+      knownFor,
+      atmosphere: null,
+      hours: null,
+      specials: null,
+      reviews: null,
     };
   } catch (err) {
-    if ((err as Error).name === "AbortError") {
-      console.warn("Restaurant insights timed out for:", name);
-    } else {
-      console.error("Restaurant insights failed for:", name, err);
-    }
+    console.error("[searchPreview] Failed to fetch insights:", err);
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }

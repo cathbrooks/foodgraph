@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getOpenAIClient } from "@/lib/ai/client";
-import { withTimeout } from "@/lib/ai/timeout";
+import { getAnthropicClient } from "@/lib/ai/anthropicClient";
 import { jsonError } from "@/lib/utils/validation";
 
 const REFRESH_EVERY = 3;
@@ -86,19 +85,16 @@ export async function POST() {
 
   let newLabels = DEFAULT_LABELS;
   try {
-    const llm = getOpenAIClient();
-    const response = await withTimeout(
-      llm.invoke([
-        { role: "system", content: CHIPS_SYSTEM_PROMPT },
-        { role: "user", content: "Generate 5 new button labels." },
-      ]),
-      4000
-    );
+    const client = getAnthropicClient();
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 256,
+      system: CHIPS_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: "Generate 5 new button labels." }],
+    });
 
     const text =
-      typeof response.content === "string"
-        ? response.content
-        : String(response.content);
+      response.content[0]?.type === "text" ? response.content[0].text : "";
 
     const parsed = text
       .split("\n")
@@ -109,7 +105,7 @@ export async function POST() {
       newLabels = parsed;
     }
   } catch {
-    // LLM failure — keep defaults or previous labels
+    // LLM failure — keep previous labels
     if (row.labels?.length === DEFAULT_LABELS.length) {
       newLabels = row.labels;
     }

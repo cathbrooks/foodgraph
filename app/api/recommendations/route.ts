@@ -6,8 +6,6 @@ import { filterRestaurants } from "@/lib/restaurants/filters";
 import { scoreRestaurants } from "@/lib/scoring/recommendationScorer";
 import { selectWildcard } from "@/lib/wildcard/wildcardEngine";
 import { getPersonalizationHints } from "@/lib/personalization/personalizationEngine";
-import { generateFallbackExplanations } from "@/lib/chat/explanationPrompt";
-import { trackRecommendationEvent } from "@/lib/chat/trackRecommendation";
 import { LocationSchema } from "@/types/restaurant";
 import { jsonError } from "@/lib/utils/validation";
 import { z } from "zod";
@@ -66,7 +64,7 @@ export async function POST(request: Request) {
       requireOpenNow: true,
     });
 
-    let scored = scoreRestaurants(filtered, {
+    const scored = scoreRestaurants(filtered, {
       budget: slot,
       preferences,
       userLocationLat: location.lat,
@@ -84,35 +82,39 @@ export async function POST(request: Request) {
     }
 
     const all = wildcard ? [wildcard] : scored;
-    const explanations = generateFallbackExplanations(all, preferences?.distance_unit);
-    scored = all.map((rec) => {
-      const match = explanations.explanations.find(
-        (e) => e.place_id === rec.restaurant.place_id
-      );
-      return match ? { ...rec, explanation: match.explanation } : rec;
-    });
 
     let eventId: string | null = null;
     try {
-      eventId = await trackRecommendationEvent({
-        userId: user.id,
-        slot,
-        location,
-        results: scored,
-        candidateCount: candidates.length,
-        filtersApplied: {
-          budget: !!slot,
-          open_now: true,
-          max_distance_km: radiusKm,
-          dietary: preferences?.dietary_restrictions ?? [],
-        },
-      });
+      const { data } = await supabase
+        .from("recommendation_events")
+        .insert({
+          user_id: user.id,
+          slot_id: slot?.id ?? null,
+          location_lat: location.lat,
+          location_lng: location.lng,
+          results: all.map((r) => ({
+            place_id: r.restaurant.place_id,
+            name: r.restaurant.name,
+            score: r.score,
+            is_wildcard: r.is_wildcard,
+          })),
+          candidate_count: candidates.length,
+          filters_applied: {
+            budget: !!slot,
+            open_now: true,
+            max_distance_km: radiusKm,
+            dietary: preferences?.dietary_restrictions ?? [],
+          },
+        })
+        .select("id")
+        .single();
+      eventId = data?.id ?? null;
     } catch (err) {
       console.error("Failed to track recommendation event:", err);
     }
 
     return NextResponse.json({
-      recommendations: scored,
+      recommendations: all,
       wildcard,
       slot,
       recommendation_event_id: eventId,

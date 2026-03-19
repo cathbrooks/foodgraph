@@ -12,12 +12,6 @@ import type { DistanceUnit } from "@/types/profile";
 import type { LayoutProps } from "@/components/layouts/types";
 import { Layout4 } from "@/components/layouts";
 
-interface PendingBudgetConfirmation {
-  userMessage: string;
-  assistantPrompt: string;
-  includeWildcard: boolean;
-}
-
 const FIXED_CHIP = {
   label: "Find me something within my budget",
   budgetChoice: "slot" as BudgetChoice,
@@ -40,33 +34,24 @@ const DEFAULT_DYNAMIC_LABELS = [
   "I'm feeling fancy",
 ];
 
-const BUDGET_CHIPS = [
-  { label: "Under $15", value: 15 },
-  { label: "Under $25", value: 25 },
-  { label: "Under $50", value: 50 },
-  { label: "Under $75", value: 75 },
-] as const;
-
 const ActiveLayout = Layout4;
 
 export default function ChatPage() {
   const messages = useChatStore((s) => s.messages);
   const setMessages = useChatStore((s) => s.setMessages);
-  const lastRecommendations = useChatStore((s) => s.lastRecommendations);
-  const setLastRecommendations = useChatStore((s) => s.setLastRecommendations);
+  const appendToLastMessage = useChatStore((s) => s.appendToLastMessage);
   const sessionState = useChatStore((s) => s.sessionState);
-  const setSessionState = useChatStore((s) => s.setSessionState);
   const mergeStateUpdates = useChatStore((s) => s.mergeStateUpdates);
   const placeDetails = useChatStore((s) => s.placeDetails);
   const setPlaceDetails = useChatStore((s) => s.setPlaceDetails);
   const selectedPlaceId = useChatStore((s) => s.selectedPlaceId);
   const setSelectedPlaceId = useChatStore((s) => s.setSelectedPlaceId);
   const confirmedBudget = useChatStore((s) => s.confirmedBudget);
-  const setConfirmedBudget = useChatStore((s) => s.setConfirmedBudget);
   const dynamicLabels = useChatStore((s) => s.dynamicLabels);
   const setDynamicLabels = useChatStore((s) => s.setDynamicLabels);
   const greeting = useChatStore((s) => s.greeting);
   const setGreeting = useChatStore((s) => s.setGreeting);
+  const setSessionState = useChatStore((s) => s.setSessionState);
   const resetStore = useChatStore((s) => s.reset);
 
   const [input, setInput] = useState("");
@@ -74,9 +59,6 @@ export default function ChatPage() {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
   const [detailsLoading, setDetailsLoading] = useState<string | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
-  const [pendingConfirmation, setPendingConfirmation] = useState<PendingBudgetConfirmation | null>(null);
-  const [showBudgetChips, setShowBudgetChips] = useState(false);
-  const [budgetPromptLoading, setBudgetPromptLoading] = useState(false);
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>("km");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -90,9 +72,6 @@ export default function ChatPage() {
     setLastEventId(null);
     setDetailsLoading(null);
     setExpandedMessages(new Set());
-    setPendingConfirmation(null);
-    setShowBudgetChips(false);
-    setBudgetPromptLoading(false);
 
     fetch("/api/chat/welcome-chips", { method: "POST" })
       .then((res) => (res.ok ? res.json() : null))
@@ -179,19 +158,6 @@ export default function ChatPage() {
     return msg;
   }
 
-  function extractRecommendationContext(recs: ScoredRecommendation[]): RecommendationContext[] {
-    return recs.map((r) => ({
-      restaurant_name: r.restaurant.name,
-      place_id: r.restaurant.place_id,
-      cuisine: r.restaurant.cuisines?.[0] ?? null,
-      avg_price: r.restaurant.avg_price_per_person ?? null,
-      rating: r.restaurant.rating ?? null,
-      distance_km: r.restaurant.distance_km ?? null,
-      is_wildcard: r.is_wildcard ?? false,
-      explanation: r.explanation ?? null,
-    }));
-  }
-
   async function fetchRecommendations(
     message: string,
     budgetChoice: BudgetChoice,
@@ -200,6 +166,19 @@ export default function ChatPage() {
   ) {
     setLoading(true);
     scrollToBottom();
+
+    // Add placeholder for the streaming assistant message
+    const placeholderId = crypto.randomUUID();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: placeholderId,
+        role: "assistant",
+        content: "",
+        recommendations: null,
+        created_at: new Date().toISOString(),
+      },
+    ]);
 
     try {
       const res = await fetch("/api/chat", {
@@ -212,156 +191,93 @@ export default function ChatPage() {
           budget_choice: budgetChoice,
           custom_budget_ceiling: customCeiling,
           history: buildHistory(),
-          last_recommendations: lastRecommendations,
           session_state: sessionState,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
 
-      const data = await res.json();
-      setMessages((prev) => [...prev, data.message]);
-      if (data.recommendation_event_id) {
-        setLastEventId(data.recommendation_event_id);
-      }
-      if (data.message.recommendations?.length) {
-        setLastRecommendations(extractRecommendationContext(data.message.recommendations));
-      }
-      if (data.state_updates) {
-        mergeStateUpdates(data.state_updates);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+
+          let event: { type: string; delta?: string; message?: ChatMessage; recommendation_event_id?: string | null; state_updates?: unknown; message_str?: string };
+          try {
+            event = JSON.parse(raw);
+          } catch {
+            continue;
+          }
+
+          if (event.type === "text" && event.delta) {
+            // Hide the loading skeleton as soon as text starts streaming
+            if (loading) setLoading(false);
+            appendToLastMessage(event.delta);
+            scrollToBottom();
+          } else if (event.type === "done" && event.message) {
+            // Replace placeholder with final message (includes recommendations)
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === placeholderId ? { ...event.message!, id: placeholderId } : m
+              )
+            );
+            if (event.recommendation_event_id) {
+              setLastEventId(event.recommendation_event_id);
+            }
+            if (event.message.recommendations?.length) {
+              // session state updated via state_updates below
+            }
+            if (event.state_updates) {
+              mergeStateUpdates(event.state_updates as Parameters<typeof mergeStateUpdates>[0]);
+            }
+          } else if (event.type === "error") {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === placeholderId
+                  ? { ...m, content: "Something went wrong. Please try again." }
+                  : m
+              )
+            );
+          }
+        }
       }
     } catch (err) {
-      addAssistantMessage(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === placeholderId
+            ? {
+                ...m,
+                content:
+                  err instanceof Error ? err.message : "Something went wrong. Please try again.",
+              }
+            : m
+        )
       );
     } finally {
       setLoading(false);
       scrollToBottom();
       inputRef.current?.focus();
-    }
-  }
-
-  async function startBudgetConfirmation(text: string, includeWildcard = false) {
-    if (!location) return;
-
-    addUserMessage(text);
-    setBudgetPromptLoading(true);
-    scrollToBottom();
-
-    let promptText: string;
-    try {
-      const res = await fetch("/api/chat/budget-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_message: text }),
-      });
-      const data = await res.json();
-      promptText = data.message;
-    } catch {
-      promptText = "Sounds good! Do you want me to stick to your usual budget, or are you open to anything?";
-    }
-
-    addAssistantMessage(promptText);
-    setBudgetPromptLoading(false);
-    setPendingConfirmation({
-      userMessage: text,
-      assistantPrompt: promptText,
-      includeWildcard,
-    });
-    scrollToBottom();
-  }
-
-  async function handleBudgetSelection(choice: BudgetChoice, customCeiling: number | null = null) {
-    if (!pendingConfirmation) return;
-
-    const choiceLabels: Record<BudgetChoice, string> = {
-      slot: "Use my current budget",
-      custom: customCeiling ? `Under $${customCeiling}` : "Set a custom budget",
-      none: "Budget doesn't matter",
-    };
-
-    addUserMessage(choiceLabels[choice]);
-    setConfirmedBudget({ choice, customCeiling });
-    const { userMessage, includeWildcard } = pendingConfirmation;
-    setPendingConfirmation(null);
-    setShowBudgetChips(false);
-
-    await fetchRecommendations(userMessage, choice, customCeiling, includeWildcard);
-  }
-
-  async function sendDirectToChat(text: string) {
-    addUserMessage(text);
-    setLoading(true);
-    scrollToBottom();
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          location,
-          include_wildcard: false,
-          budget_choice: "none" as BudgetChoice,
-          custom_budget_ceiling: null,
-          history: buildHistory(),
-          last_recommendations: lastRecommendations,
-          session_state: sessionState,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ?? `Request failed (${res.status})`);
-      }
-
-      const data = await res.json();
-      setMessages((prev) => [...prev, data.message]);
-      if (data.state_updates) {
-        mergeStateUpdates(data.state_updates);
-      }
-    } catch (err) {
-      addAssistantMessage(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
-      );
-    } finally {
-      setLoading(false);
-      scrollToBottom();
-      inputRef.current?.focus();
-    }
-  }
-
-  async function classifyIntent(text: string): Promise<{ type: string; priceCeiling: number | null; priceFloor: number | null }> {
-    try {
-      const restaurantNames = sessionState.restaurants.map((r) => r.restaurant_name);
-      const res = await fetch("/api/chat/classify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_message: text,
-          history: buildHistory(),
-          restaurant_names: restaurantNames,
-        }),
-      });
-      if (!res.ok) return { type: "recommend", priceCeiling: null, priceFloor: null };
-      const data = await res.json();
-      return {
-        type: data.type ?? "recommend",
-        priceCeiling: data.priceCeiling ?? null,
-        priceFloor: data.priceFloor ?? null,
-      };
-    } catch {
-      return { type: "recommend", priceCeiling: null, priceFloor: null };
     }
   }
 
   async function sendMessage(text: string) {
-    if (!text.trim() || loading || budgetPromptLoading) return;
+    if (!text.trim() || loading) return;
 
     if (!location) {
       if (status === "denied") {
@@ -377,49 +293,17 @@ export default function ChatPage() {
     }
 
     setInput("");
-
-    if (pendingConfirmation && showBudgetChips) {
-      const match = text.trim().match(/^\$?(\d+)/);
-      if (match) {
-        const amount = parseInt(match[1], 10);
-        await handleBudgetSelection("custom", amount);
-        return;
-      }
-    }
-
-    setBudgetPromptLoading(true);
-    const classified = await classifyIntent(text.trim());
-    setBudgetPromptLoading(false);
-
-    if (classified.type === "change_budget") {
-      addUserMessage(text.trim());
-      if (classified.priceCeiling != null) {
-        setConfirmedBudget({ choice: "custom", customCeiling: classified.priceCeiling });
-        await fetchRecommendations(text.trim(), "custom", classified.priceCeiling);
-      } else {
-        setConfirmedBudget({ choice: "none", customCeiling: null });
-        await fetchRecommendations(text.trim(), "none");
-      }
-    } else if (classified.type === "recommend" || classified.type === "refine") {
-      if (confirmedBudget) {
-        addUserMessage(text.trim());
-        await fetchRecommendations(
-          text.trim(),
-          confirmedBudget.choice,
-          confirmedBudget.customCeiling
-        );
-      } else {
-        await startBudgetConfirmation(text.trim());
-      }
-    } else {
-      await sendDirectToChat(text.trim());
-    }
+    addUserMessage(text.trim());
+    await fetchRecommendations(
+      text.trim(),
+      confirmedBudget?.choice ?? "slot",
+      confirmedBudget?.customCeiling ?? null
+    );
   }
 
   async function handleFindFood() {
     if (!location || loading) return;
     addUserMessage("Find me somewhere to eat right now in my budget.");
-    addAssistantMessage("On it! Remember, you can fine-tune your cuisine and dietary preferences in your profile.");
     await fetchRecommendations("Find me somewhere to eat right now in my budget", "slot");
   }
 
@@ -432,18 +316,22 @@ export default function ChatPage() {
 
   function handleChipClick(chip: { label: string; budgetChoice: BudgetChoice | null; skipConfirmation: boolean }) {
     if (!location || loading) return;
-
-    if (chip.skipConfirmation && chip.budgetChoice) {
-      addUserMessage(chip.label);
-      fetchRecommendations(
-        chip.label,
-        chip.budgetChoice,
-        null,
-        "wildcard" in chip && (chip as Record<string, unknown>).wildcard === true
-      );
-    } else {
-      startBudgetConfirmation(chip.label, false);
-    }
+    // Prefix custom budget into message so the agent sees it explicitly
+    const budgetPrefix =
+      chip.budgetChoice === "none"
+        ? "[No budget limit] "
+        : chip.budgetChoice === "slot"
+        ? "[Use my budget slot] "
+        : "";
+    const messageText = budgetPrefix + chip.label;
+    addUserMessage(chip.label);
+    const isWildcard = "wildcard" in chip && (chip as Record<string, unknown>).wildcard === true;
+    fetchRecommendations(
+      messageText,
+      chip.budgetChoice ?? confirmedBudget?.choice ?? "slot",
+      chip.budgetChoice === null ? (confirmedBudget?.customCeiling ?? null) : null,
+      isWildcard
+    );
   }
 
   function handleCardClick(rec: ScoredRecommendation) {
@@ -527,22 +415,18 @@ export default function ChatPage() {
   const locationReady = status === "granted" && !!location;
   const locationPending = status === "requesting";
   const locationFailed = status === "denied" || status === "unavailable";
-  const hasStarted = messages.length > 0 || loading || budgetPromptLoading;
+  const hasStarted = messages.length > 0 || loading;
 
   const layoutProps: LayoutProps = {
     messages,
     input,
     setInput,
     loading,
-    budgetPromptLoading,
     locationReady,
     locationPending,
     locationFailed,
     locError: locError ?? null,
     hasStarted,
-    pendingConfirmation,
-    showBudgetChips,
-    setShowBudgetChips,
     selectedPlaceId,
     placeDetails,
     detailsLoading,
@@ -555,7 +439,6 @@ export default function ChatPage() {
     handleChipClick,
     handleFindFood,
     handleWildcard,
-    handleBudgetSelection,
     handleCardClick,
     handleCardSelect,
     requestLocation,
@@ -565,7 +448,6 @@ export default function ChatPage() {
       FIXED_CHIP,
       ...DYNAMIC_CHIP_TEMPLATES.map((tpl, i) => ({ ...tpl, label: dynamicLabels[i] })),
     ],
-    budgetChips: BUDGET_CHIPS,
     distanceUnit,
   };
 

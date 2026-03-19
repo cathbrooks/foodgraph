@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type {
   ChatMessage,
   BudgetChoice,
-  RecommendationContext,
   SessionState,
   StateUpdates,
 } from "@/types/chat";
@@ -12,7 +11,6 @@ import type { PlaceDetails } from "@/types/restaurant";
 
 interface ChatState {
   messages: ChatMessage[];
-  lastRecommendations: RecommendationContext[];
   sessionState: SessionState;
   placeDetails: Record<string, PlaceDetails>;
   selectedPlaceId: string | null;
@@ -25,7 +23,7 @@ interface ChatActions {
   setMessages: (
     fn: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[]),
   ) => void;
-  setLastRecommendations: (recs: RecommendationContext[]) => void;
+  appendToLastMessage: (delta: string) => void;
   setSessionState: (
     fn: SessionState | ((prev: SessionState) => SessionState),
   ) => void;
@@ -54,7 +52,6 @@ const DEFAULT_DYNAMIC_LABELS = [
 
 const INITIAL_STATE: ChatState = {
   messages: [],
-  lastRecommendations: [],
   sessionState: { ...EMPTY_SESSION_STATE },
   placeDetails: {},
   selectedPlaceId: null,
@@ -73,7 +70,14 @@ export const useChatStore = create<ChatState & ChatActions>()(
           messages: typeof fn === "function" ? fn(s.messages) : fn,
         })),
 
-      setLastRecommendations: (recs) => set({ lastRecommendations: recs }),
+      appendToLastMessage: (delta) =>
+        set((s) => {
+          if (s.messages.length === 0) return {};
+          const messages = [...s.messages];
+          const last = messages[messages.length - 1];
+          messages[messages.length - 1] = { ...last, content: last.content + delta };
+          return { messages };
+        }),
 
       setSessionState: (fn) =>
         set((s) => ({
