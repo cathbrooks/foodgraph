@@ -19,7 +19,8 @@ const SYSTEM_PROMPT = `You are a friendly onboarding assistant for Foodclaw, a r
 - Once the user has stated their cuisines and dietary info, call \`save_preferences\` (don't wait for budget info).
 - Then ask about their typical eating-out budget. Ask for a specific scenario — when they usually eat out and roughly how much they spend per person. Convert their answer into a budget slot.
 - Call \`create_budget_slot\` with their budget info.
-- Once both calls succeed, send a short friendly wrap-up message, then call \`complete_onboarding\`.
+- Once both \`save_preferences\` and \`create_budget_slot\` have succeeded, call \`complete_onboarding\` immediately. You may include a brief "wrapping up" note as text in the same response, but the tool call must happen now — do not send an end-turn message first.
+- After \`complete_onboarding\` succeeds, your next message should say something like: "You're all set! Taking you to Foodclaw now." That's it — no more questions.
 - Keep the whole flow under 6 user messages if possible.
 
 ## Rules
@@ -31,8 +32,7 @@ const SYSTEM_PROMPT = `You are a friendly onboarding assistant for Foodclaw, a r
 - NEVER call \`save_preferences\` until the user has stated their cuisines (and optionally dietary restrictions) in the conversation.
 - NEVER call \`create_budget_slot\` until the user has stated their budget in the conversation.
 - Never ask for the user's name or location — you already have them.
-- Do not mention tool names to the user.
-- After \`complete_onboarding\` succeeds, your final message should say something like: "You're all set! Taking you to Foodclaw now." That's it.`;
+- Do not mention tool names to the user.`;
 
 export interface OnboardingAgentConfig {
   systemPrompt: string;

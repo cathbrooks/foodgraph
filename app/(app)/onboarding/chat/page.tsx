@@ -85,14 +85,10 @@ export default function OnboardingChatPage() {
             );
             scrollToBottom();
           } else if (event.type === "complete") {
-            // Mark onboarding cookie so middleware skips the DB check
+            // Mark onboarding cookie so middleware skips the DB check, then redirect
             justCompletedRef.current = true;
             document.cookie = "fg_onboarded=1; path=/; max-age=31536000; SameSite=Lax";
-          } else if (event.type === "done") {
-            // Only redirect if complete_onboarding fired in this response
-            if (justCompletedRef.current) {
-              setTimeout(() => router.push("/chat"), 1200);
-            }
+            setTimeout(() => router.push("/chat"), 1500);
           } else if (event.type === "error") {
             setMessages((prev) =>
               prev.map((m) =>

@@ -82,6 +82,19 @@ export async function POST(request: Request) {
           }
         }
 
+        // Fallback: if the tool wasn't flagged in this request, check the DB
+        // (handles edge cases where Claude skips the tool call)
+        if (!onboardingCompleted) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("user_id", user.id)
+            .single();
+          if (profile?.onboarding_completed) {
+            onboardingCompleted = true;
+          }
+        }
+
         if (onboardingCompleted) {
           send({ type: "complete" });
         }
