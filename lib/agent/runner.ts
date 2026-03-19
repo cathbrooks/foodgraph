@@ -147,15 +147,18 @@ export async function* streamAgent(
       max_tokens: maxTokens,
     });
 
-    // Collect the full response while streaming text deltas
+    // Buffer text deltas — only emit them if this turn ends with end_turn.
+    // If stop_reason is tool_use, the text is preamble and should be discarded
+    // to prevent a "double response" where both preamble and final text appear.
     let finalMessage: Anthropic.Message | null = null;
+    const textBuffer: string[] = [];
 
     for await (const event of stream) {
       if (
         event.type === "content_block_delta" &&
         event.delta.type === "text_delta"
       ) {
-        yield { type: "text_delta", text: event.delta.text };
+        textBuffer.push(event.delta.text);
       }
       if (event.type === "message_stop") {
         finalMessage = await stream.finalMessage();
@@ -169,6 +172,10 @@ export async function* streamAgent(
     messages.push({ role: "assistant", content: finalMessage.content });
 
     if (finalMessage.stop_reason === "end_turn") {
+      // Only yield text from the final turn
+      for (const text of textBuffer) {
+        yield { type: "text_delta", text };
+      }
       yield { type: "done", finalContent: finalMessage.content };
       return;
     }

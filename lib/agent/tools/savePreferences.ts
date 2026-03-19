@@ -47,12 +47,15 @@ export function buildSavePreferencesTool(userId: string): AgentTool {
         const supabase = await createClient();
         const { error } = await supabase
           .from("user_preferences")
-          .upsert({
-            user_id: userId,
-            cuisines,
-            dietary_restrictions,
-            updated_at: new Date().toISOString(),
-          });
+          .upsert(
+            {
+              user_id: userId,
+              cuisines,
+              dietary_restrictions,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
 
         if (error) {
           console.error("[savePreferences] Upsert failed:", error.message);

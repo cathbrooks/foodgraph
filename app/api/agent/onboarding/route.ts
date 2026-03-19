@@ -48,12 +48,17 @@ export async function POST(request: Request) {
     return t;
   });
 
+  // __init__ is sent by the client to trigger the opening greeting.
+  // Replace it with a neutral prompt so Claude doesn't try to infer preferences
+  // from a meaningless token and call tools before the user has said anything.
+  const normalizedMessage = message === "__init__" ? "Hi!" : message;
+
   const messages: Anthropic.MessageParam[] = [
     ...history.map((h) => ({
       role: h.role as "user" | "assistant",
       content: h.content,
     })),
-    { role: "user" as const, content: message },
+    { role: "user" as const, content: normalizedMessage },
   ];
 
   const encoder = new TextEncoder();

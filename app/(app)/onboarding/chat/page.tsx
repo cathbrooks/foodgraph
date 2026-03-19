@@ -17,6 +17,7 @@ export default function OnboardingChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
+  const justCompletedRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -29,6 +30,7 @@ export default function OnboardingChatPage() {
   }
 
   async function sendMessage(text: string, currentMessages: Message[]) {
+    justCompletedRef.current = false;
     setLoading(true);
 
     const assistantId = crypto.randomUUID();
@@ -84,12 +86,11 @@ export default function OnboardingChatPage() {
             scrollToBottom();
           } else if (event.type === "complete") {
             // Mark onboarding cookie so middleware skips the DB check
+            justCompletedRef.current = true;
             document.cookie = "fg_onboarded=1; path=/; max-age=31536000; SameSite=Lax";
           } else if (event.type === "done") {
-            // Check if we should redirect (complete event was received before done)
-            const cookies = document.cookie.split(";").map((c) => c.trim());
-            const isOnboarded = cookies.some((c) => c.startsWith("fg_onboarded="));
-            if (isOnboarded) {
+            // Only redirect if complete_onboarding fired in this response
+            if (justCompletedRef.current) {
               setTimeout(() => router.push("/chat"), 1200);
             }
           } else if (event.type === "error") {
@@ -133,11 +134,11 @@ export default function OnboardingChatPage() {
 
     setInput("");
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text };
-    setMessages((prev) => {
-      const next = [...prev, userMsg];
-      sendMessage(text, next.filter((m) => m.role !== "assistant" || m.content !== ""));
-      return next;
-    });
+    const history = [...messages, userMsg].filter(
+      (m) => m.role !== "assistant" || m.content !== ""
+    );
+    setMessages((prev) => [...prev, userMsg]);
+    sendMessage(text, history);
     scrollToBottom();
   }
 
