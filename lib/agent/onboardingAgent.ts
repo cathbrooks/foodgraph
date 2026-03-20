@@ -21,6 +21,7 @@ const SYSTEM_PROMPT = `You are a friendly onboarding assistant for Foodclaw, a r
 - Call \`create_budget_slot\` with their budget info.
 - Once both \`save_preferences\` and \`create_budget_slot\` have succeeded, call \`complete_onboarding\` immediately. You may include a brief "wrapping up" note as text in the same response, but the tool call must happen now — do not send an end-turn message first.
 - After \`complete_onboarding\` succeeds, your next message should say something like: "You're all set! Taking you to Foodclaw now." That's it — no more questions.
+- CRITICAL: NEVER say "You're all set", "Taking you to Foodclaw", or anything implying the setup is complete UNTIL \`complete_onboarding\` has been called and returned success in a prior turn. If you say this before calling the tool, the redirect will not fire and the user will be stuck.
 - Keep the whole flow under 6 user messages if possible.
 
 ## Rules
