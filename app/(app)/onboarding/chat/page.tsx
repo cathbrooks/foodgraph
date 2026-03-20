@@ -141,7 +141,7 @@ export default function OnboardingChatPage() {
   const visibleMessages = messages.filter((m) => m.role !== "user" || m.content !== "__init__");
 
   return (
-    <div className="flex flex-col flex-1 bg-gradient-to-b from-white via-gray-50/60 to-white">
+    <div className="flex flex-col flex-1 min-h-0 bg-gradient-to-b from-white via-gray-50/60 to-white">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-black text-white">
